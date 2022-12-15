@@ -1,14 +1,16 @@
 from sympy import im
 import torch
 from torch.nn.modules.loss import _Loss
+from torch_scatter import scatter
+from torch_geometric.loader import DataLoader
 from e3nn.o3 import Irrep, Irreps, spherical_harmonics, TensorProduct, FullyConnectedTensorProduct
 from e3nn.nn import Gate, FullyConnectedNet
 from e3nn.math import soft_one_hot_linspace
+import matplotlib.pyplot as plt
+import pandas as pd
 import math
-from torch_scatter import scatter
-from torch_geometric.loader import DataLoader
 import time
-
+from utils.utils_plot import generate_dafaframe, plot_bands
 torch.autograd.set_detect_anomaly(True)
 
 class BandLoss(_Loss):
@@ -369,7 +371,7 @@ def train(model,
                   f"valid loss = {valid_avg_loss:8.20f}   " +
                   f"elapsed time = {time.strftime('%H:%M:%S', time.gmtime(wall))}")
 
-            with open(run_name + '.torch', 'wb') as f:
+            with open(f'./models/{run_name}.torch', 'wb') as f:
                 torch.save(results, f)
 
             record_line = '%d\t%.20f\t%.20f'%(step,train_avg_loss,valid_avg_loss)
@@ -378,8 +380,11 @@ def train(model,
             loss_plot(run_name, device, './models/' + run_name)
             loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn)
 
-            # direct_prediction_ordered(model, tr_loader, 'Train', loss_fn, './models/' + run_name, device)
-            # direct_prediction_ordered(model, te_loader, 'Test', loss_fn, './models/' + run_name, device)
+            df_tr = generate_dafaframe(model, tr_loader, loss_fn, device)
+            df_te = generate_dafaframe(model, te_loader, loss_fn, device)
+            palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
+            plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
+            plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
         
         text_file = open(run_name + ".txt", "w")
         for line in record_lines:
@@ -388,3 +393,6 @@ def train(model,
 
         if scheduler is not None:
             scheduler.step()
+
+
+

@@ -2,14 +2,13 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import math
 from scipy.stats import gaussian_kde
-from utils.utils_model import get_spectra
 from scipy.stats import gaussian_kde
 from scipy.optimize import curve_fit
 from matplotlib.ticker import FormatStrFormatter
 from ase import Atoms, Atom
 from copy import copy
-# utilities
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -17,7 +16,6 @@ palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
 datasets = ['train', 'valid', 'test']
 colors = dict(zip(datasets, palette[:-1]))
 cmap = mpl.colors.LinearSegmentedColormap.from_list('cmap', [palette[k] for k in [0,2,1]])
-
 
 def loss_plot(model_file, device, fig_file):
     history = torch.load(model_file + '.torch', map_location = device)['history']
@@ -53,24 +51,6 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn):
     fig.savefig(fig_file + '_loss_test.png')
     plt.close()
 
-def generate_dafaframe(model, dataloader, loss_fn, device):
-    with torch.no_grad():
-        df = pd.DataFrame(columns=['id', 'name', 'loss', 'real_band', 'output_test'])
-        for d in dataloader:
-            d.to(device)
-            if len(d.pos) > 60:
-                continue
-            Hs, shifts = model(d)
-            output = get_spectra(Hs, shifts, d.qpts)
-            loss = loss_fn(output, d.y).cpu()
-            real = d.y.cpu().numpy()*1000
-            pred = output.cpu().numpy()*1000
-            rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real_band': list(real), 'output_test': list(np.array([pred]))}
-            df0 = pd.DataFrame(data = rrr)
-            df = pd.concat([df, df0], ignore_index=True)
-    return df
-
-
 def simname(symbol):
     count = 0
     prev = ''
@@ -89,6 +69,19 @@ def simname(symbol):
 
 
 def loss_dist(axl, ds, num, palette, xtiles, fontsize):
+    """_summary_
+
+    Args:
+        axl (_type_): _description_
+        ds (_type_): _description_
+        num (_type_): _description_
+        palette (_type_): _description_
+        xtiles (_type_): _description_
+        fontsize (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     y_min, y_max = ds['loss'].min(), ds['loss'].max()
     y = np.linspace(y_min, y_max, 5000)
     kde = gaussian_kde(list(ds['loss']))
@@ -110,13 +103,41 @@ def loss_dist(axl, ds, num, palette, xtiles, fontsize):
     axl.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
     return axl, cols
 
-def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True):
+def get_spectra(Hs, shifts, qpts):
+    H = torch.sum(torch.mul(Hs.unsqueeze(1), torch.exp(2j*math.pi*torch.matmul(shifts, qpts.type(torch.complex128).t())).unsqueeze(-1).unsqueeze(-1)), dim = 0)
+    eigvals = torch.linalg.eigvals(H)
+    abx = torch.abs(eigvals)
+    try:
+        epsilon = torch.min(abx[abx > 0])/100
+    except:
+        epsilon = 1E-8
+    eigvals = torch.sqrt(eigvals + epsilon)
+    return torch.sort(torch.real(eigvals))[0]
+
+def generate_dafaframe(model, dataloader, loss_fn, device):
+    with torch.no_grad():
+        df = pd.DataFrame(columns=['id', 'name', 'loss', 'real_band', 'output_test'])
+        for d in dataloader:
+            d.to(device)
+            if len(d.pos) > 60:
+                continue
+            Hs, shifts = model(d)
+            output = get_spectra(Hs, shifts, d.qpts)
+            loss = loss_fn(output, d.y).cpu()
+            real = d.y.cpu().numpy()*1000
+            pred = output.cpu().numpy()*1000
+            rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real_band': list(real), 'output_test': list(np.array([pred]))}
+            df0 = pd.DataFrame(data = rrr)
+            df = pd.concat([df, df0], ignore_index=True)
+    return df
+
+def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True):
     """_summary_
 
     Args:
         df_in (pandas.core.frame.DataFrame): _description_
         struct_data (pandas.core.frame.DataFrame): _description_
-        fig_header (str): _description_
+        header (str): _description_
         title (str, optional): _description_. Defaults to None.
         n (int, optional): _description_. Defaults to 5.
         m (int, optional): _description_. Defaults to 1.
@@ -171,7 +192,7 @@ def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(
     fig.subplots_adjust(hspace=0.6)
     fig.patch.set_facecolor('white')
     if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-    fig.savefig(f"{fig_header}_{title}_bands.png")
+    fig.savefig(f"{header}_{title}_bands.png")
     print(id_list)
     
 

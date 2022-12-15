@@ -104,7 +104,7 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max):
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
             print(id)
             data_dict[id] = build_data(id, structure, qpts, band_structure, r_max)
-        pkl.dump(data_dict, open(data_dict_path, 'wb'))
+        # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))
     return data_dict

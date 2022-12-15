@@ -110,7 +110,7 @@ def loss_dist(axl, ds, num, palette, xtiles, fontsize):
     axl.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
     return axl, cols
 
-def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette):
+def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True):
     """_summary_
 
     Args:
@@ -154,7 +154,10 @@ def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(
         ax.plot(range(xpts), predb, color=cols[k], linewidth=lwidth)
         id_list.append(ds.iloc[i]['id'])
         # ax.set_title(f"{struct_data[struct_data['id']==ds.iloc[i]['key']]['structure'].item().get_chemical_formula().translate(sub)}", fontsize=fontsize*1.5)
-        ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
+        if formula:
+            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
+        else:
+            ax.set_title(ds.iloc[i]['id'].translate(sub), fontsize=fontsize*1.8)
         min_y1, max_y1 = np.min(realb), np.max(realb)
         min_y2, max_y2 = np.min(predb), np.max(predb)
         min_y = min([min_y1, min_y2])
@@ -172,8 +175,102 @@ def plot_bands(df_in, fig_header, title=None, n=5, m=1, lwidth=0.5, windowsize=(
     print(id_list)
     
 
+def compare_corr(df1, df2, color1, color2, header, size=5):
+    """_summary_
 
-def get_element_statistics(data_set):    
+    Args:
+        df1 (pandas.core.frame.DataFrame): Dataframe1
+        df2 (pandas.core.frame.DataFrame): Dataframe2
+        color1 (str): Hex color for df1's correlation plot
+        color2 (str): Hex color for df1's correlation plot
+        header (str): header as the save dir and file name
+        size (int, optional): Size of the data points. Defaults to 5.
+    """
+    gphs1 = np.concatenate([df1.iloc[i]['real_band'] for i in range(len(df1))])
+    gphs_pred1 = np.concatenate([df1.iloc[i]['output_test'] for i in range(len(df1))])
+    gphs2 = np.concatenate([df2.iloc[i]['real_band'] for i in range(len(df2))])
+    gphs_pred2 = np.concatenate([df2.iloc[i]['output_test'] for i in range(len(df2))])
+    min_x1, max_x1 = np.min(gphs1), np.max(gphs1)
+    min_y1, max_y1 = np.min(gphs_pred1), np.max(gphs_pred1)
+    min_x2, max_x2 = np.min(gphs2), np.max(gphs2)
+    min_y2, max_y2 = np.min(gphs_pred2), np.max(gphs_pred2)
+    minimum = min(min_x1, min_x2, min_y1, min_y2)
+    maximum = max(max_x1, max_x2,max_y1, max_y2)
+    width = maximum - minimum
+    fig, ax = plt.subplots(1,1, figsize=(6, 6))
+    ax.plot([minimum-0.01*width, maximum+0.01*width], [minimum-0.01*width, maximum+0.01*width], color='k')
+    ax.set_xlim(minimum-0.01*width, maximum+0.01*width)
+    ax.set_ylim(minimum-0.01*width, maximum+0.01*width)
+
+    ax.scatter(gphs1, gphs_pred1, s=size, marker='.', color=color1)
+    ax.scatter(gphs2, gphs_pred2, s=size, marker='.', color=color2)
+
+    ax.tick_params(axis='both', which='major', labelsize=15)
+    ax.tick_params(axis='both', which='minor', labelsize=12)
+    ax.set_xlabel('True $\omega$ [$cm^{-1}$]', fontsize=16)
+    ax.set_ylabel('Predicted $\omega$ [$cm^{-1}$]', fontsize=16)
+
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.6)
+    fig.patch.set_facecolor('white')
+    fig.savefig(f"{header}scatter_compare.png")
+    fig.savefig(f"{header}scatter_compare.pdf")
+
+def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), lw=3):
+    """_summary_
+
+    Args:
+        df1 (pandas.core.frame.DataFrame): Dataframe1
+        df2 (pandas.core.frame.DataFrame): Dataframe2
+        color1 (str): Hex color for df1's loss plot
+        color2 (str): Hex color for df1's loss plot
+        header (str): header as the save dir and file name
+        labels (tuple, optional): Legends. Defaults to ('Model1', 'Model2').
+        lw (int, optional): Line width. Defaults to 3.
+    """
+    fig, ax = plt.subplots(1,1, figsize=(6, 6))
+    min_x1, max_x1 = df1['loss'].min(), df1['loss'].max()
+    x1 = np.linspace(min_x1, max_x1, 500)
+    kde1 = gaussian_kde(df1['loss'])
+    p1 = kde1.pdf(x1)
+    ax.plot(x1, p1, color=color1, label=labels[0], lw=lw)
+    min_x2, max_x2 = df2['loss'].min(), df2['loss'].max()
+    x2 = np.linspace(min_x2, max_x2, 500)
+    kde2 = gaussian_kde(df2['loss'])
+    p2 = kde2.pdf(x2)
+    ax.plot(x2, p2, color=color2, label=labels[1], lw=lw)
+    ax.set_xscale('log')
+    min_y1, max_y1 = np.min(p1), np.max(p1)
+    min_y2, max_y2 = np.min(p2), np.max(p2)
+    min_x, max_x = min([min_x1, min_x2]), max([max_x1, max_x2])
+    min_y, max_y = min([min_y1, min_y2]), max([max_y1, max_y2])
+    width_x = max_x - min_x
+    width_y = max_y - min_y
+    ax.set_xlim(min_x-0.08*width_x, max_x+0.08*width_x)
+    ax.set_ylim(min_y-0.08*width_y, max_y+0.08*width_y)
+    ax.tick_params(axis='x', which='major', labelsize=15)
+    ax.tick_params(axis='x', which='minor', labelsize=13)
+    ax.xaxis.set_major_formatter(FormatStrFormatter("%.3f"))
+    ax.legend()
+    ax.set_xlabel('Loss', fontsize=16)
+    ax.set_ylabel('Probability density', fontsize=16)
+    # fig.tight_layout()
+    # fig.subplots_adjust(hspace=0.6)
+    fig.patch.set_facecolor('white')
+    if labels: fig.suptitle(f'{labels[0]}_{labels[1]}', ha='center', y=1., fontsize=16)
+    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.png")
+    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.pdf")
+
+
+def get_element_statistics(data_set):
+    """_summary_
+
+    Args:
+        data_set (torch.utils.data.dataset.Subset): tr_set or te_set
+
+    Returns:
+        pandas.core.frame.DataFrame: Dataframe of the counts on how many mterials have each elememnt.
+    """
     species = []
     for Z in range(1, 119):
         species.append(Atom(Z).symbol)
@@ -183,7 +280,7 @@ def get_element_statistics(data_set):
     for i in range(len_data):
         data = data_set[i]
         d_species = set([data.symbol[j] for j in range(len(data.symbol))])
-        
+
         for d_specie in d_species:
             species_dict[d_specie].append(i)
 
@@ -193,21 +290,27 @@ def get_element_statistics(data_set):
     for specie in species:
         stats.at[stats.index[stats['symbol'] == specie].values[0], 'data'] = species_dict[specie]
     stats['count'] = stats['data'].apply(len)
-
     return stats
 
 
-def plot_element_count_stack(data_set1, data_set2, fig_header=None, title=None, 
+def plot_element_count_stack(data_set1, data_set2, header=None, title=None, 
                              bar_colors=['#90BE6D', '#277DA1']):
+    """_summary_
+
+    Args:
+        data_set1 (torch.utils.data.dataset.Subset): tr_set or te_set
+        data_set2 (torch.utils.data.dataset.Subset): tr_set or te_set
+        header (str): header as the save dir and file name Defaults to None.
+        title (str, optional): Figure title. Defaults to None.
+        bar_colors (list, optional): [color1, color2]. Defaults to ['#90BE6D', '#277DA1'].
+    """
     rows=2
     stats1 = get_element_statistics(data_set1)
     stats1_elems = set(stats1[stats1['count']>0]['symbol'])
     # stats1=stats1[stats1['count']>0].reset_index(drop=True)
-    num_elems1 = len(stats1)
     stats2 = get_element_statistics(data_set2)
     stats2_elems =set(stats2[stats2['count']>0]['symbol'])
     # stats1=stats1[stats1['count']>0].reset_index(drop=True)
-    num_elems2 = len(stats2)
     elems_common = stats1_elems.union(stats2_elems)
     idx_stats1 = []
     idx_stats2 = []
@@ -228,7 +331,7 @@ def plot_element_count_stack(data_set1, data_set2, fig_header=None, title=None,
     for l in range(len(stats2)):
         # if stats['count'][l] > 0:
         anums2[stats2['symbol'][l]]=stats2['count'][l]
-    fig0, axs = plt.subplots(rows,1, figsize=(27, 10*rows)) 
+    fig, axs = plt.subplots(rows,1, figsize=(27, 10*rows)) 
     # for j in range(rows):
     bar_max = max(anums1.values())+max(anums2.values())
     if rows==2:
@@ -250,6 +353,6 @@ def plot_element_count_stack(data_set1, data_set2, fig_header=None, title=None,
         ax1.tick_params(axis='y', which='major', labelsize=23)
         ax1.set_ylim(0, bar_max*1.05)
         ax1.legend()
-    if title: fig0.suptitle(title, ha='center', y=1., fontsize=fontsize_set + 4)
-    fig0.patch.set_facecolor('white')
-    fig0.savefig(f'{fig_header}_element_count_{title}.png')
+    if title: fig.suptitle(title, ha='center', y=1., fontsize=20)
+    fig.patch.set_facecolor('white')
+    fig.savefig(f'{header}_element_count_{title}.png')

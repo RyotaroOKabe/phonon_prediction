@@ -30,3 +30,23 @@ def load_band_structure_data(data_dir, raw_dir, data_file):
         return df
     else:
         return pd.read_pickle(data_path)
+
+# def load_data(filename):
+#     df = pd.read_csv(filename, index_col=0)
+#     try:
+#         # structure provided as Atoms object
+#         df['structure'] = df['structure'].apply(eval).progress_map(lambda x: Atoms.fromdict(x))
+    
+#     except:
+#         # no structure provided
+#         pass
+
+#     else:
+#         df['formula'] = df['structure'].map(lambda x: x.get_chemical_formula())
+#         df['species'] = df['structure'].map(lambda x: list(set(x.get_chemical_symbols())))
+#         species = sorted(list(set(df['species'].sum())))
+
+#     df['qpts'] = df['qpts'].apply(eval).apply(np.array)
+#     df['band_structure'] = df['band_structure'].apply(eval).apply(np.array)
+
+#     return df

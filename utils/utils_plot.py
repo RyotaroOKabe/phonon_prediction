@@ -195,6 +195,10 @@ def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2
     fig.savefig(f"{header}_{title}_bands.png")
     print(id_list)
     
+def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
+    # function to plot gamma phonons of the tertiles. 
+    pass
+
 
 def compare_corr(df1, df2, color1, color2, header, size=5):
     """_summary_

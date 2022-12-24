@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 import time
-from utils.utils_plot import generate_dafaframe, plot_bands
+from utils.utils_plot import generate_dafaframe, plot_bands, plot_gphonons
 torch.autograd.set_detect_anomaly(True)
 
 class BandLoss(_Loss):
@@ -265,14 +265,114 @@ def get_spectra(Hs, shifts, qpts):
     eigvals = torch.sqrt(eigvals + epsilon)
     return torch.sort(torch.real(eigvals))[0]
 
-def evaluate(model, dataloader, loss_fn, device):
+
+class GraphNetworkVVN(torch.nn.Module): #!!!
+    def __init__(self,
+                 mul,
+                 irreps_out,
+                 lmax,
+                 nlayers,
+                 number_of_basis,
+                 radial_layers,
+                 radial_neurons,
+                 node_dim,
+                 node_embed_dim,
+                 input_dim,
+                 input_embed_dim):
+        super().__init__()
+        
+        self.mul = mul
+        self.irreps_in = Irreps(str(input_embed_dim)+'x0e')
+        self.irreps_node_attr = Irreps(str(node_embed_dim)+'x0e')
+        self.irreps_edge_attr = Irreps.spherical_harmonics(lmax)
+        self.irreps_hidden = Irreps([(self.mul, (l, p)) for l in range(lmax + 1) for p in [-1, 1]])
+        self.irreps_out = Irreps(irreps_out)
+        self.number_of_basis = number_of_basis
+
+        act = {1: torch.nn.functional.silu,
+               -1: torch.tanh}
+        act_gates = {1: torch.sigmoid,
+                     -1: torch.tanh}
+
+        self.layers = torch.nn.ModuleList()
+        irreps_in = self.irreps_in
+        for _ in range(nlayers):
+            irreps_scalars = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l == 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            irreps_gated = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l > 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            ir = "0e" if tp_path_exists(irreps_in, self.irreps_edge_attr, "0e") else "0o"
+            irreps_gates = Irreps([(mul, ir) for mul, _ in irreps_gated])
+
+            gate = Gate(irreps_scalars, [act[ir.p] for _, ir in irreps_scalars],
+                        irreps_gates, [act_gates[ir.p] for _, ir in irreps_gates],
+                        irreps_gated)
+            conv = GraphConvolution(irreps_in,
+                                    self.irreps_node_attr,
+                                    self.irreps_edge_attr,
+                                    gate.irreps_in,
+                                    number_of_basis,
+                                    radial_layers,
+                                    radial_neurons)
+
+            irreps_in = gate.irreps_out
+
+            self.layers.append(CustomCompose(conv, gate))
+        #last layer: conv
+        self.layers.append(GraphConvolution(irreps_in,
+                        self.irreps_node_attr,
+                        self.irreps_edge_attr,
+                        self.irreps_out,
+                        number_of_basis,
+                        radial_layers,
+                        radial_neurons,)
+                        )
+
+        self.emx = torch.nn.Linear(input_dim, input_embed_dim, dtype = torch.float64)
+        self.emz = torch.nn.Linear(node_dim, node_embed_dim, dtype = torch.float64)
+
+    def forward(self, data):
+        edge_src = data['edge_index'][0]
+        edge_dst = data['edge_index'][1]
+        edge_vec = data['edge_vec']
+        edge_len = data['edge_len']
+        edge_length_embedded = soft_one_hot_linspace(edge_len, 0.0, data['r_max'].item(), self.number_of_basis, basis = 'gaussian', cutoff = False)
+        edge_sh = spherical_harmonics(self.irreps_edge_attr, edge_vec, True, normalization = 'component')
+        edge_attr = edge_sh
+        numb = data['numb']
+        # print(f'data.x: ', data['x'].shape)    #!
+        # print(f'data.z: ', data['z'].shape)    #!
+        x = torch.relu(self.emx(torch.relu(data['x'])))
+        z = torch.relu(self.emz(torch.relu(data['z'])))
+        node_deg = data['node_deg']
+        # ucs = data['ucs'][0]
+        # n = len(ucs.shift_reverse)
+        n=None
+        count = 0   #!
+        # print(f'X ({count}): ', x.shape)    #!
+        # print(f'Z ({count}): ', z.shape)    #!
+        for layer in self.layers:
+            x = layer(x, z, node_deg, edge_src, edge_dst, edge_attr, edge_length_embedded, numb, n)
+            count += 1
+        #     print(f'X ({count}): ', x.shape)    #!
+        #     print(f'Z ({count}): ', z.shape)    #!
+        # print('numb: ', numb)
+        # print('X: ', x.shape)   #!
+        x = x.reshape((1, -1))[:, numb:] #.reshape((1, -1))[:, data.sites:]
+        # print('X reshape, cut: ', x.shape)
+        # print('edge_src: ', edge_src.shape)
+        return x
+
+
+def evaluate(model, dataloader, loss_fn, device, option='kmvn'):
     model.eval()
     loss_cumulative = 0.
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            Hs, shifts = model(d)
-            output = get_spectra(Hs, shifts, d.qpts)
+            if option in ['kmvn', 'mvn']:   #!
+                Hs, shifts = model(d)
+                output = get_spectra(Hs, shifts, d.qpts)
+            else:   #!
+                output = model(d)
             loss = loss_fn(output, d.y).cpu()
             loss_cumulative += loss.detach().item()
     return loss_cumulative/len(dataloader)
@@ -294,8 +394,9 @@ def train(model,
           scheduler,
           device,
           batch_size,
-          k_fold):
-    from utils.utils_plot import loss_plot, loss_test_plot, direct_prediction_ordered
+          k_fold,
+          option='kmvn'):
+    from utils.utils_plot import loss_plot, loss_test_plot
     model.to(device)
     checkpoint_generator = loglinspace(0.3, 5)
     checkpoint = next(checkpoint_generator)
@@ -328,8 +429,13 @@ def train(model,
         for i, d in enumerate(tr_loader):
             start = time.time()
             d.to(device)
-            Hs, shifts = model(d)
-            output = get_spectra(Hs, shifts, d.qpts)
+            if option in ['kmvn', 'mvn']:   #!
+                Hs, shifts = model(d)
+                output = get_spectra(Hs, shifts, d.qpts)
+            else:   #!
+                output = model(d)
+            # print(f'output: ', output.shape)    #!
+            # print(f'd.y: ', d.y.shape)    #!
             loss = loss_fn(output, d.y).cpu()
             opt.zero_grad()
             loss.backward()
@@ -344,8 +450,8 @@ def train(model,
             checkpoint = next(checkpoint_generator)
             assert checkpoint > step
 
-            valid_avg_loss = evaluate(model, va_loader, loss_fn, device)
-            train_avg_loss = evaluate(model, tr_loader, loss_fn, device)
+            valid_avg_loss = evaluate(model, va_loader, loss_fn, device, option)    #!
+            train_avg_loss = evaluate(model, tr_loader, loss_fn, device, option)    #!
 
             history.append({
                             'step': s0 + step,
@@ -376,16 +482,22 @@ def train(model,
 
             record_line = '%d\t%.20f\t%.20f'%(step,train_avg_loss,valid_avg_loss)
             record_lines.append(record_line)
-
-            loss_plot(run_name, device, './models/' + run_name)
-            loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn)
-
-            df_tr = generate_dafaframe(model, tr_loader, loss_fn, device)
-            df_te = generate_dafaframe(model, te_loader, loss_fn, device)
+            print('point1')
+            loss_plot('./models/' + run_name, device, './models/' + run_name)
+            print('point2')
+            loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn, option)
+            print('point3')
+            df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, option)
+            df_te = generate_dafaframe(model, te_loader, loss_fn, device, option)
+            print('point4')
             palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
-            plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
-            plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
-        
+            # if option == 'kmvn':
+            #     plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
+            #     plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
+            # elif option in ['mvn', 'vvn']:
+            #     plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
+            #     plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
+            print('point5')
         text_file = open(run_name + ".txt", "w")
         for line in record_lines:
             text_file.write(line + "\n")

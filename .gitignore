@@ -1,3 +1,10 @@
 utils_vvn/
+utils_mvn_tmp/
+slurm/
 kMVN_alloy.ipynb
 *.pkl
+*.png
+*.pdf
+VVN.py
+*.sh
+*.txt

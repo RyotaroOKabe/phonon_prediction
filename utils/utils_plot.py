@@ -32,15 +32,20 @@ def loss_plot(model_file, device, fig_file):
     fig.savefig(fig_file  + '_loss_train_valid.png')
     plt.close()
 
-def loss_test_plot(model, device, fig_file, dataloader, loss_fn):
+def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     loss_test = []
     model.to(device)
     model.eval()
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            Hs, shifts = model(d)
-            output = get_spectra(Hs, shifts, d.qpts)
+            # Hs, shifts = model(d)
+            # output = get_spectra(Hs, shifts, d.qpts)
+            if option in ['kmvn', 'mvn']:   #!
+                Hs, shifts = model(d)
+                output = get_spectra(Hs, shifts, d.qpts)
+            else:   #!
+                output = model(d)
             loss = loss_fn(output, d.y).cpu()
             loss_test.append(loss)
 
@@ -114,15 +119,20 @@ def get_spectra(Hs, shifts, qpts):
     eigvals = torch.sqrt(eigvals + epsilon)
     return torch.sort(torch.real(eigvals))[0]
 
-def generate_dafaframe(model, dataloader, loss_fn, device):
+def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
     with torch.no_grad():
         df = pd.DataFrame(columns=['id', 'name', 'loss', 'real_band', 'output_test'])
         for d in dataloader:
             d.to(device)
             if len(d.pos) > 60:
                 continue
-            Hs, shifts = model(d)
-            output = get_spectra(Hs, shifts, d.qpts)
+            # Hs, shifts = model(d)
+            # output = get_spectra(Hs, shifts, d.qpts)
+            if option in ['kmvn', 'mvn']:   #!
+                Hs, shifts = model(d)
+                output = get_spectra(Hs, shifts, d.qpts)
+            else:   #!
+                output = model(d)
             loss = loss_fn(output, d.y).cpu()
             real = d.y.cpu().numpy()*1000
             pred = output.cpu().numpy()*1000
@@ -193,11 +203,60 @@ def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2
     fig.patch.set_facecolor('white')
     if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
     fig.savefig(f"{header}_{title}_bands.png")
+    fig.savefig(f"{header}_{title}_bands.pdf")
     print(id_list)
     
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
     # function to plot gamma phonons of the tertiles. 
-    pass
+    fontsize = 10
+    i_mse = np.argsort(df_in['loss'])
+    ds = df_in.iloc[i_mse][['id', 'name', 'real_band', 'output_test', 'loss']].reset_index(drop=True)
+    tiles = (1/3, 2/3, 1.)
+    num = len(tiles)
+    xtiles = np.quantile(ds['loss'].values, tiles)
+    iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
+    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=False)) for k in range(1,num+1)])
+    fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
+    gs = axs[0,0].get_gridspec()
+    # remove the underlying axes
+    for ax in axs[:,0]:
+        ax.remove()
+    # add long axis
+    axl = fig.add_subplot(gs[:,0])
+    axl, cols=loss_dist(axl, ds, num, palette, xtiles, fontsize)
+
+    cols = np.repeat(cols, n*m)
+    axs = axs[:,1:].ravel()
+    id_list = []
+    for k in range(num*m*n):
+        ax = axs[k]
+        i = s[k]
+        realg = ds.iloc[i]['real_band'].reshape(-1)
+        predg = ds.iloc[i]['output_test'].reshape(-1)
+        for j in range(ds.iloc[i]['real_band'].shape[0]):
+            ax.hlines(realg[j], 0.2, 1.2,color='k', linewidth=lwidth*0.6)
+            ax.hlines(predg[j], 1.5, 2.5,color=cols[k], linewidth=lwidth)
+        # corr = scipy.stats.pearsonr(ds.iloc[i]['gph'], ds.iloc[i]['gph_pred'])
+        if formula:
+            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
+        else:
+            ax.set_title(ds.iloc[i]['id'].translate(sub), fontsize=fontsize*1.8)
+        min_x, max_x = 0.2, 2.5
+        min_y1, max_y1, min_y2, max_y2 = np.min(realg), np.max(realg), np.min(predg), np.max(predg)
+        min_y, max_y = min([min_y1, min_y2]), max([max_y1, max_y2])
+        width_x, width_y = max_x - min_x, max_y - min_y
+        ax.set_xlim(min_x-0.05*width_x, max_x+0.05*width_x)
+        ax.set_ylim(min_y-0.05*width_y, max_y+0.05*width_y)
+        ax.tick_params(axis='y', which='major', labelsize=12)
+        ax.tick_params(axis='y', which='minor', labelsize=10)
+        ax.set_xticks([])
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.6)
+    fig.patch.set_facecolor('white')
+    if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
+    fig.savefig(f"{header}_{title}_gphonons.png")
+    fig.savefig(f"{header}_{title}_gphonons.pdf")
+    print(id_list)
 
 
 def compare_corr(df1, df2, color1, color2, header, size=5):

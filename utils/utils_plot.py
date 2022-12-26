@@ -241,6 +241,7 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
             ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
         else:
             ax.set_title(ds.iloc[i]['id'].translate(sub), fontsize=fontsize*1.8)
+        id_list.append(ds.iloc[i]['id'])
         min_x, max_x = 0.2, 2.5
         min_y1, max_y1, min_y2, max_y2 = np.min(realg), np.max(realg), np.min(predg), np.max(predg)
         min_y, max_y = min([min_y1, min_y2]), max([max_y1, max_y2])
@@ -428,8 +429,8 @@ def plot_element_count_stack(data_set1, data_set2, header=None, title=None,
         ax0.set_ylim(0, bar_max*1.05)
         ax0.tick_params(axis='y', which='major', labelsize=23)
         ax0.legend()
+        ax0.set_ylabel('Counts', fontsize=24)
         ax1=axs[1]
-        # ax1.bar(range(cols, len(anums)), list(anums.values())[cols:], width=0.6, color='#277DA1')
         ax1.bar(range(cols, len(anums1)), list(anums1.values())[cols:], width=0.6, color=bar_colors[0], label='Train')
         ax1.bar(range(cols, len(anums2)), list(anums2.values())[cols:], bottom=list(anums1.values())[cols:], width=0.6, color=bar_colors[1], label='Test')
         ax1.set_xticks(np.arange(cols, len(anums1)))
@@ -437,6 +438,7 @@ def plot_element_count_stack(data_set1, data_set2, header=None, title=None,
         ax1.tick_params(axis='y', which='major', labelsize=23)
         ax1.set_ylim(0, bar_max*1.05)
         ax1.legend()
+        ax1.set_ylabel('Counts', fontsize=24)
     if title: fig.suptitle(title, ha='center', y=1., fontsize=20)
     fig.patch.set_facecolor('white')
     fig.savefig(f'{header}_element_count_{title}.png')

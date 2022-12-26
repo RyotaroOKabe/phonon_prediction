@@ -491,14 +491,14 @@ def train(model,
             df_te = generate_dafaframe(model, te_loader, loss_fn, device, option)
             print('point4')
             palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
-            # if option == 'kmvn':
-            #     plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
-            #     plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
-            # elif option in ['mvn', 'vvn']:
-            #     plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
-            #     plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
+            if option == 'kmvn':
+                plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
+                plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
+            elif option in ['mvn', 'vvn']:
+                plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
+                plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
             print('point5')
-        text_file = open(run_name + ".txt", "w")
+        text_file = open('./models/' + run_name + ".txt", "w")
         for line in record_lines:
             text_file.write(line + "\n")
         text_file.close()

@@ -1,6 +1,7 @@
 utils_vvn/
 utils_mvn_tmp/
 slurm/
+archive/
 kMVN_alloy.ipynb
 *.pkl
 *.png

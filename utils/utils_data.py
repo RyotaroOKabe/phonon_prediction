@@ -131,8 +131,8 @@ def append_diag_vn(struct, element="Fe"):
         struct2.append(Atom(element, (vec[0], vec[1], vec[2])))
     return struct2
 
-def create_virtual_nodes_vvn(structure0, edge_src0, edge_dst0, edge_shift0):
-    structure = append_diag_vn(structure0, element="Fe")
+def create_virtual_nodes_vvn(structure0, vnelem, edge_src0, edge_dst0, edge_shift0):
+    structure = append_diag_vn(structure0, element=vnelem)
     positions = torch.from_numpy(structure.get_positions().copy())
     positions0 = torch.from_numpy(structure0.get_positions().copy())
     numb = len(positions0)
@@ -177,13 +177,13 @@ def get_node_feature_vvn(atomic_numbers):
         x.append(node_feature)
     return torch.from_numpy(np.array(x, dtype = np.float64))
 
-def build_data_vvn(id, structure, qpts, gphonon, r_max):
+def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe'):
     symbols = list(structure.symbols).copy()
     positions = torch.from_numpy(structure.get_positions().copy())
     numb = len(positions)
     lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
     _edge_src, _edge_dst, _edge_shift, _, _ = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, _edge_src, _edge_dst, _edge_shift)
+    edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, vnelem, _edge_src, _edge_dst, _edge_shift)
     # _z = get_node_attr(structure.arrays['numbers'], 3*numb)
     # _x = get_input(structure.arrays['numbers'], 3*numb)
     z = get_node_attr_vvn(structure_vn.arrays['numbers'])
@@ -222,8 +222,9 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max):
     return data
 
 
-def generate_gamma_data_dict(data_dir, run_name, data, r_max):
+def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26):
     data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
+    vnelem = Atom(vn_an).symbol #!
     if len(glob.glob(data_dict_path)) == 0:
         data_dict = dict()
         ids = data['id']
@@ -233,7 +234,7 @@ def generate_gamma_data_dict(data_dir, run_name, data, r_max):
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
             print(id)
             gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
-            data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max)
+            data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max, vnelem)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))

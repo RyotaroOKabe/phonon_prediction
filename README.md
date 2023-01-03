@@ -1,4 +1,4 @@
-# phonon_prediction
+# Virtual Node Graph Neural Network for Full Phonon Prediction
 We present the virtual node graph neural network (VGNN) to address the challenges in phonon prediction. 
 
 #### Work from a local installation

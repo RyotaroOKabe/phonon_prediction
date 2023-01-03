@@ -21,7 +21,7 @@ To work from a local copy of the code:
 
 	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-1.10.0+cu102.html`
 
-4. Run `jupyter notebook` and open `VVN.ipynb`, `MVN.ipynb`, or `kMVN.ipynb`.
+4. Run `jupyter notebook` and open `VVN.ipynb` or `kMVN.ipynb`.
 
 ### References
 **Publication:** Zhantao Chen, Nina Andrejevic, Tess Smidt, *et al.* "Virtual Node Graph Neural Network for Full Phonon

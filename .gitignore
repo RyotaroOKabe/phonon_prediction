@@ -7,6 +7,7 @@ kMVN_alloy.ipynb
 *.png
 *.pdf
 VVN.py
+kMVN.py
 *.sh
 22*
 23*

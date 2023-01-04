@@ -481,14 +481,10 @@ def train(model,
 
             record_line = '%d\t%.20f\t%.20f'%(step,train_avg_loss,valid_avg_loss)
             record_lines.append(record_line)
-            print('point1')
             loss_plot('./models/' + run_name, device, './models/' + run_name)
-            print('point2')
             loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn, option)
-            print('point3')
             df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, option)
             df_te = generate_dafaframe(model, te_loader, loss_fn, device, option)
-            print('point4')
             palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
             if option == 'kmvn':
                 plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
@@ -496,7 +492,6 @@ def train(model,
             elif option in ['mvn', 'vvn']:
                 plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
                 plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
-            print('point5')
         text_file = open('./models/' + run_name + ".txt", "w")
         for line in record_lines:
             text_file.write(line + "\n")

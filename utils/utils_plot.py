@@ -39,8 +39,6 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            # Hs, shifts = model(d)
-            # output = get_spectra(Hs, shifts, d.qpts)
             if option in ['kmvn', 'mvn']:   #!
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
@@ -126,12 +124,10 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
             d.to(device)
             if len(d.pos) > 60:
                 continue
-            # Hs, shifts = model(d)
-            # output = get_spectra(Hs, shifts, d.qpts)
-            if option in ['kmvn', 'mvn']:   #!
+            if option in ['kmvn', 'mvn']:
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
-            else:   #!
+            else:
                 output = model(d)
             loss = loss_fn(output, d.y).cpu()
             real = d.y.cpu().numpy()*1000
@@ -184,7 +180,6 @@ def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2
         ax.plot(range(xpts), realb, color='k', linewidth=lwidth*0.8)
         ax.plot(range(xpts), predb, color=cols[k], linewidth=lwidth)
         id_list.append(ds.iloc[i]['id'])
-        # ax.set_title(f"{struct_data[struct_data['id']==ds.iloc[i]['key']]['structure'].item().get_chemical_formula().translate(sub)}", fontsize=fontsize*1.5)
         if formula:
             ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
         else:
@@ -236,7 +231,6 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
         for j in range(ds.iloc[i]['real_band'].shape[0]):
             ax.hlines(realg[j], 0.2, 1.2,color='k', linewidth=lwidth*0.6)
             ax.hlines(predg[j], 1.5, 2.5,color=cols[k], linewidth=lwidth)
-        # corr = scipy.stats.pearsonr(ds.iloc[i]['gph'], ds.iloc[i]['gph_pred'])
         if formula:
             ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
         else:

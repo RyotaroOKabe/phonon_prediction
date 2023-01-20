@@ -136,7 +136,6 @@ def create_virtual_nodes_vvn(structure0, vnelem, edge_src0, edge_dst0, edge_shif
     positions = torch.from_numpy(structure.get_positions().copy())
     positions0 = torch.from_numpy(structure0.get_positions().copy())
     numb = len(positions0)
-    # print('numb: ', numb)
     lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
     idx_real, idx_virt = range(numb), range(numb, 4*numb)
     rv_pairs = list(itertools.product(idx_real, idx_virt))
@@ -149,11 +148,9 @@ def create_virtual_nodes_vvn(structure0, vnelem, edge_src0, edge_dst0, edge_shif
         edge_dst = np.append(edge_dst, np.array([rv_pairs[i][1]]))
         edge_shift = np.concatenate((edge_shift, np.array([[0, 0, 0]])), axis=0)
     for j in range(len(vv_pairs)):
-        # print('check: ', j)
         edge_src = np.append(edge_src, np.array([vv_pairs[j][0]]))
         edge_dst = np.append(edge_dst, np.array([vv_pairs[j][1]]))
         edge_shift = np.concatenate((edge_shift, np.array([[0, 0, 0]])), axis=0)
-    # print('Finish checking!: ', j)
     edge_batch = positions.new_zeros(positions.shape[0], dtype=torch.long)[torch.from_numpy(edge_src)]
     edge_vec = (positions[torch.from_numpy(edge_dst)]
                 - positions[torch.from_numpy(edge_src)]
@@ -184,16 +181,8 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe'):
     lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
     _edge_src, _edge_dst, _edge_shift, _, _ = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
     edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, vnelem, _edge_src, _edge_dst, _edge_shift)
-    # _z = get_node_attr(structure.arrays['numbers'], 3*numb)
-    # _x = get_input(structure.arrays['numbers'], 3*numb)
     z = get_node_attr_vvn(structure_vn.arrays['numbers'])
     x =  get_node_feature_vvn(structure_vn.arrays['numbers'])
-    # print("structure.arrays['numbers']: ", structure.arrays['numbers'])
-    # print("structure.arrays['numbers']: ", structure.arrays['numbers'].shape)
-    # print("structure_vn.arrays['numbers']: ", structure_vn.arrays['numbers'])
-    # print("structure_vn.arrays['numbers']: ", structure_vn.arrays['numbers'].shape)
-    # print("z_emb: ", z.shape)
-    # print("x_emb: ", x.shape)
     node_deg = get_node_deg(edge_dst, len(x))
     y = torch.from_numpy(gphonon/1000).unsqueeze(0)
     data = Data(id = id,
@@ -213,11 +202,6 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe'):
                 r_max = r_max,
                 # ucs = None,
                 numb = numb)
-
-    # print('symbols: ', symbols)
-    # print('numb: ', numb)
-    # print('edge_src: ', edge_src.shape)
-    # print('gphonon: ', gphonon.shape)
     
     return data
 

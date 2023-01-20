@@ -265,7 +265,7 @@ def get_spectra(Hs, shifts, qpts):
     return torch.sort(torch.real(eigvals))[0]
 
 
-class GraphNetworkVVN(torch.nn.Module): #!!!
+class GraphNetworkVVN(torch.nn.Module):
     def __init__(self,
                  mul,
                  irreps_out,
@@ -337,27 +337,15 @@ class GraphNetworkVVN(torch.nn.Module): #!!!
         edge_sh = spherical_harmonics(self.irreps_edge_attr, edge_vec, True, normalization = 'component')
         edge_attr = edge_sh
         numb = data['numb']
-        # print(f'data.x: ', data['x'].shape)    #!
-        # print(f'data.z: ', data['z'].shape)    #!
         x = torch.relu(self.emx(torch.relu(data['x'])))
         z = torch.relu(self.emz(torch.relu(data['z'])))
         node_deg = data['node_deg']
-        # ucs = data['ucs'][0]
-        # n = len(ucs.shift_reverse)
         n=None
-        count = 0   #!
-        # print(f'X ({count}): ', x.shape)    #!
-        # print(f'Z ({count}): ', z.shape)    #!
+        count = 0
         for layer in self.layers:
             x = layer(x, z, node_deg, edge_src, edge_dst, edge_attr, edge_length_embedded, numb, n)
             count += 1
-        #     print(f'X ({count}): ', x.shape)    #!
-        #     print(f'Z ({count}): ', z.shape)    #!
-        # print('numb: ', numb)
-        # print('X: ', x.shape)   #!
-        x = x.reshape((1, -1))[:, numb:] #.reshape((1, -1))[:, data.sites:]
-        # print('X reshape, cut: ', x.shape)
-        # print('edge_src: ', edge_src.shape)
+        x = x.reshape((1, -1))[:, numb:]
         return x
 
 
@@ -367,10 +355,10 @@ def evaluate(model, dataloader, loss_fn, device, option='kmvn'):
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            if option in ['kmvn', 'mvn']:   #!
+            if option in ['kmvn', 'mvn']:
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
-            else:   #!
+            else:
                 output = model(d)
             loss = loss_fn(output, d.y).cpu()
             loss_cumulative += loss.detach().item()
@@ -428,13 +416,11 @@ def train(model,
         for i, d in enumerate(tr_loader):
             start = time.time()
             d.to(device)
-            if option in ['kmvn', 'mvn']:   #!
+            if option in ['kmvn', 'mvn']:
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
-            else:   #!
+            else:
                 output = model(d)
-            # print(f'output: ', output.shape)    #!
-            # print(f'd.y: ', d.y.shape)    #!
             loss = loss_fn(output, d.y).cpu()
             opt.zero_grad()
             loss.backward()
@@ -449,8 +435,8 @@ def train(model,
             checkpoint = next(checkpoint_generator)
             assert checkpoint > step
 
-            valid_avg_loss = evaluate(model, va_loader, loss_fn, device, option)    #!
-            train_avg_loss = evaluate(model, tr_loader, loss_fn, device, option)    #!
+            valid_avg_loss = evaluate(model, va_loader, loss_fn, device, option)
+            train_avg_loss = evaluate(model, tr_loader, loss_fn, device, option)
 
             history.append({
                             'step': s0 + step,

@@ -200,7 +200,7 @@ def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2
     fig.savefig(f"{header}_{title}_bands.png")
     fig.savefig(f"{header}_{title}_bands.pdf")
     print(id_list)
-    
+
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
     # function to plot gamma phonons of the tertiles. 
     fontsize = 10

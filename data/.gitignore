@@ -1,5 +1,7 @@
 *pkl
 *.json
+*.bz2
 idx_22*
 idx_23*
 985*
+ddbs/

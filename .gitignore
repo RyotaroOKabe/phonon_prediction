@@ -10,6 +10,7 @@ VVN.py
 kMVN.py
 kMVN_RO.ipynb
 pred_zeolite.py
+ternary.py
 *.sh
 22*
 23*

@@ -15,7 +15,7 @@ def load_band_structure_data(data_dir, raw_dir, data_file):
             with open(file_path) as f:
                 data = json.load(f)
             structure = Structure.from_str(data['metadata']['structure'], fmt = 'cif')
-            print(structure.__dict__)
+            # print(structure.__dict__)
             atoms = Atoms(list(map(lambda x: x.symbol, structure.species)),
                             positions = structure.cart_coords.copy(),
                             cell = structure.lattice.matrix.copy(), 

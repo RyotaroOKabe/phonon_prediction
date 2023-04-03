@@ -105,7 +105,7 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max):
         qptss = data['qpts']
         band_structures = data['band_structure']
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
-            print(id)
+            # print(id)
             data_dict[id] = build_data(id, structure, qpts, band_structure, r_max)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
@@ -216,7 +216,7 @@ def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26):
         qptss = data['qpts']
         band_structures = data['band_structure']
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
-            print(id)
+            # print(id)
             gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
             data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max, vnelem)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))

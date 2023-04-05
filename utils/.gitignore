@@ -4,3 +4,5 @@ utils_data_vvn.py
 utils_plot_path.py
 archive/
 utils_loss.py
+utils_dos.py
+utils_path.py

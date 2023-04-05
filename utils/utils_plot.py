@@ -137,7 +137,7 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
             df = pd.concat([df, df0], ignore_index=True)
     return df
 
-def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True):
+def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, gtruth=True):
     """_summary_
 
     Args:
@@ -177,7 +177,8 @@ def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2
         realb = ds.iloc[i]['real_band']
         predb = ds.iloc[i]['output_test']
         xpts = realb.shape[0]
-        ax.plot(range(xpts), realb, color='k', linewidth=lwidth*0.8)
+        if gtruth:
+            ax.plot(range(xpts), realb, color='k', linewidth=lwidth*0.8)
         ax.plot(range(xpts), predb, color=cols[k], linewidth=lwidth)
         id_list.append(ds.iloc[i]['id'])
         if formula:

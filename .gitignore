@@ -8,9 +8,12 @@ kMVN_alloy.ipynb
 *.pdf
 VVN.py
 kMVN.py
+kMVN_loss.py
 kMVN_RO.ipynb
+VVN_RO.ipynb
 pred_zeolite.py
 ternary.py
+dos.py
 *.sh
 22*
 23*

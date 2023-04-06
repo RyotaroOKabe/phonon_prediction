@@ -266,10 +266,10 @@ def compare_corr(df1, df2, color1, color2, header, size=5):
         header (str): header as the save dir and file name
         size (int, optional): Size of the data points. Defaults to 5.
     """
-    gphs1 = np.concatenate([df1.iloc[i]['real_band'] for i in range(len(df1))])
-    gphs_pred1 = np.concatenate([df1.iloc[i]['output_test'] for i in range(len(df1))])
-    gphs2 = np.concatenate([df2.iloc[i]['real_band'] for i in range(len(df2))])
-    gphs_pred2 = np.concatenate([df2.iloc[i]['output_test'] for i in range(len(df2))])
+    gphs1 = np.concatenate([df1.iloc[i]['real_band'].flatten() for i in range(len(df1))])
+    gphs_pred1 = np.concatenate([df1.iloc[i]['output_test'].flatten() for i in range(len(df1))])
+    gphs2 = np.concatenate([df2.iloc[i]['real_band'].flatten() for i in range(len(df2))])
+    gphs_pred2 = np.concatenate([df2.iloc[i]['output_test'].flatten() for i in range(len(df2))])
     min_x1, max_x1 = np.min(gphs1), np.max(gphs1)
     min_y1, max_y1 = np.min(gphs_pred1), np.max(gphs_pred1)
     min_x2, max_x2 = np.min(gphs2), np.max(gphs2)

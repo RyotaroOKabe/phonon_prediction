@@ -92,7 +92,7 @@ download_data = True
 if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
     os.system(f'rm -r {data_dir}/phonon/')
-    os.system(f'cd {data_dir}; wget https://figshare.com/ndownloader/files/9850858')
+    os.system(f'cd {data_dir}; wget --no-verbose https://figshare.com/ndownloader/files/9850858')
     os.system(f'cd {data_dir}; tar -xf 9850858')
     os.system(f'rm -r {data_dir}/9850858*')
 

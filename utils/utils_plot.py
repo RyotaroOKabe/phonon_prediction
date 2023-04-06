@@ -12,6 +12,7 @@ from copy import copy
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import sklearn
 palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
 datasets = ['train', 'valid', 'test']
 colors = dict(zip(datasets, palette[:-1]))
@@ -255,7 +256,7 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
     print(id_list)
 
 
-def compare_corr(df1, df2, color1, color2, header, size=5):
+def compare_corr(df1, df2, color1, color2, header, size=5, r2=False):
     """_summary_
 
     Args:
@@ -266,14 +267,14 @@ def compare_corr(df1, df2, color1, color2, header, size=5):
         header (str): header as the save dir and file name
         size (int, optional): Size of the data points. Defaults to 5.
     """
-    gphs1 = np.concatenate([df1.iloc[i]['real_band'].flatten() for i in range(len(df1))])
-    gphs_pred1 = np.concatenate([df1.iloc[i]['output_test'].flatten() for i in range(len(df1))])
-    gphs2 = np.concatenate([df2.iloc[i]['real_band'].flatten() for i in range(len(df2))])
-    gphs_pred2 = np.concatenate([df2.iloc[i]['output_test'].flatten() for i in range(len(df2))])
-    min_x1, max_x1 = np.min(gphs1), np.max(gphs1)
-    min_y1, max_y1 = np.min(gphs_pred1), np.max(gphs_pred1)
-    min_x2, max_x2 = np.min(gphs2), np.max(gphs2)
-    min_y2, max_y2 = np.min(gphs_pred2), np.max(gphs_pred2)
+    re_out1 = np.concatenate([df1.iloc[i]['real_band'].flatten() for i in range(len(df1))])
+    pr_out1 = np.concatenate([df1.iloc[i]['output_test'].flatten() for i in range(len(df1))])
+    re_out2 = np.concatenate([df2.iloc[i]['real_band'].flatten() for i in range(len(df2))])
+    pr_out2 = np.concatenate([df2.iloc[i]['output_test'].flatten() for i in range(len(df2))])
+    min_x1, max_x1 = np.min(re_out1), np.max(re_out1)
+    min_y1, max_y1 = np.min(pr_out1), np.max(pr_out1)
+    min_x2, max_x2 = np.min(re_out2), np.max(re_out2)
+    min_y2, max_y2 = np.min(pr_out2), np.max(pr_out2)
     minimum = min(min_x1, min_x2, min_y1, min_y2)
     maximum = max(max_x1, max_x2,max_y1, max_y2)
     width = maximum - minimum
@@ -282,13 +283,17 @@ def compare_corr(df1, df2, color1, color2, header, size=5):
     ax.set_xlim(minimum-0.01*width, maximum+0.01*width)
     ax.set_ylim(minimum-0.01*width, maximum+0.01*width)
 
-    ax.scatter(gphs1, gphs_pred1, s=size, marker='.', color=color1)
-    ax.scatter(gphs2, gphs_pred2, s=size, marker='.', color=color2)
+    ax.scatter(re_out1, pr_out1, s=size, marker='.', color=color1)
+    ax.scatter(re_out2, pr_out2, s=size, marker='.', color=color2)
 
     ax.tick_params(axis='both', which='major', labelsize=15)
     ax.tick_params(axis='both', which='minor', labelsize=12)
     ax.set_xlabel('True $\omega$ [$cm^{-1}$]', fontsize=16)
     ax.set_ylabel('Predicted $\omega$ [$cm^{-1}$]', fontsize=16)
+    if r2:
+        R2_1 = sklearn.metrics.r2_score(y_true=re_out1, y_pred=pr_out1)
+        R2_2 = sklearn.metrics.r2_score(y_true=re_out2, y_pred=pr_out2)
+        ax.set_title(f"$R^2 [1] {R2_1} [2] {R2_2}$", fontsize=16)
 
     fig.tight_layout()
     fig.subplots_adjust(hspace=0.6)

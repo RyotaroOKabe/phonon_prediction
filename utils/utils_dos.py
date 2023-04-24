@@ -116,7 +116,7 @@ def plot_dos(df_in, header, fnum=100, title=None, n=5, m=1, lwidth=0.5, windowsi
         # re_dos = dos_from_band_gauss(rband, x, sigma)
         # xpts = realb.shape[0]
         if gtruth:
-            ax.plot(re_dos, x, color='k', linewidth=lwidth*0.8)
+            ax.plot(re_dos, x, color='k', linewidth=lwidth*0.7)
         ax.plot(pr_dos, x, color=cols[k], linewidth=lwidth)
         id_list.append(ds.iloc[i]['id'])
         if formula:

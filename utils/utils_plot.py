@@ -12,6 +12,7 @@ from copy import copy
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import sklearn
 palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
 datasets = ['train', 'valid', 'test']
 colors = dict(zip(datasets, palette[:-1]))

@@ -6,3 +6,5 @@ archive/
 utils_loss.py
 utils_dos.py
 utils_path.py
+utils_cutfill.py
+*novgnn.py

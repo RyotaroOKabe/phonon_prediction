@@ -15,6 +15,9 @@ pred_zeolite.py
 ternary.py
 dos.py
 zeo_opt.py
+=======
+cutfill.py
+novgnn.*
 *.sh
 22*
 23*

@@ -11,7 +11,7 @@ kMVN.py
 kMVN_loss.py
 kMVN_RO.ipynb
 VVN_RO.ipynb
-kMVNnonneg.*
+kMVNnonneg*
 kMVN_neg*
 kMVN_sample*
 pred_zeolite.py

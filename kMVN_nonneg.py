@@ -24,6 +24,8 @@ palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
+file_name = os.path.basename(__file__)
+print("File Name:", file_name)
 run_name = time.strftime('%y%m%d-%H%M%S', time.localtime())
 model_dir = './models'
 data_dir = './data'

@@ -19,7 +19,7 @@ pred_zeolite.py
 ternary.py
 dos.py
 zeo_opt.py
-=======
+kMVN_hermitian.py
 cutfill.py
 novgnn*
 *gru.py

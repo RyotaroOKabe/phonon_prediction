@@ -10,3 +10,4 @@ utils_cutfill.py
 *novgnn.py
 *kappa.py
 *novgnn.py*nomass.py
+utils_model_hermitian.py

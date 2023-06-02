@@ -34,7 +34,7 @@ print('torch device: ', device)
 print('model name: ', run_name)
 print('data_file: ', data_file)
 
-tr_ratio = 0.9
+tr_ratio = 0.6
 batch_size = 1
 k_fold = 5
 
@@ -57,6 +57,7 @@ node_embed_dim = 32 #32
 input_dim = 118
 input_embed_dim = 32 #32
 irreps_out = '101x0e' #'2x0e+2x1e+2x2e'
+factor = 1000
 
 print('\nmodel parameters')
 print('max iteration: ', max_iter)
@@ -72,6 +73,7 @@ print('node attribute embedding dimension: ', node_embed_dim)
 print('input dimension: ', input_dim)
 print('input embedding dimension: ', input_embed_dim)
 print('irreduceble output representation: ', irreps_out)
+print('Div, mul factor: ', factor)
 
 #%%
 loss_fn = BandLoss()
@@ -104,13 +106,13 @@ mpids = list(anharmonic['mpid'])
 for i in range(len(anharmonic)):
     mpid = anharmonic.iloc[i]['mpid']
     row = data[data['id']==mpid]
-    print(row['structure'].item())
+    # print(row['structure'].item())
     anharmonic['structure'][i]=row['structure'].item()
 keys = anharmonic.keys()
 
 #%%
 # data = load_band_structure_data(data_dir, raw_dir, data_file)
-data_dict = generate_kappa_data_dict(data_dir, run_name, anharmonic, r_max)
+data_dict = generate_kappa_data_dict(data_dir, run_name, anharmonic, r_max, factor)
 
 #%%
 num = len(data_dict)
@@ -164,6 +166,7 @@ train(model,
       device,
       batch_size,
       k_fold,
+      factor,
       )
 
 
@@ -174,8 +177,8 @@ tr_loader = DataLoader(tr_set, batch_size = batch_size)
 te1_loader = DataLoader(te_set, batch_size = batch_size)
 
 # Generate Data Frame
-df_tr = generate_dafaframe(model, tr_loader, loss_fn, device)
-df_te = generate_dafaframe(model, te1_loader, loss_fn, device)
+df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, factor)
+df_te = generate_dafaframe(model, te1_loader, loss_fn, device, factor)
 
 # Plot the bands of TRAIN data
 plot_kappa(df_tr, header='./models/' + model_name, title='TRAIN', n=4, m=1, lwidth=0.6, windowsize=(3, 2.5), palette=palette, formula=True)

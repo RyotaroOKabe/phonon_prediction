@@ -14,6 +14,7 @@ VVN_RO.ipynb
 kMVNnonneg*
 kMVN_neg*
 kMVN_sample*
+kMVN_2.py
 pred_zeolite.py
 ternary.py
 dos.py

@@ -12,7 +12,8 @@ kMVN_data.py
 kMVN_loss.py
 kMVN_RO.ipynb
 VVN_RO.ipynb
-kMVNnonneg*
+kMVN_nonneg*
+kMVN_nomass*
 kMVN_neg*
 kMVN_sample*
 kMVN_2.py

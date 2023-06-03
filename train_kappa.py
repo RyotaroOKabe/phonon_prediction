@@ -58,7 +58,8 @@ node_dim = 118
 node_embed_dim = 32 #32
 input_dim = 118
 input_embed_dim = 32 #32
-irreps_out = '101x0e' #'2x0e+2x1e+2x2e'
+temp_dim = 30
+irreps_out = f'{temp_dim}x0e' #'2x0e+2x1e+2x2e'
 factor = 1000
 
 print('\nmodel parameters')
@@ -104,6 +105,8 @@ file = './data/anharmonic_fc_2.pkl'
 anharmonic = pkl.load(open(file, 'rb'))
 anharmonic['mpid'] = anharmonic['mpid'].map(lambda x: 'mp-' + str(x))
 anharmonic['structure'] = anharmonic['mpid'].map(lambda x: 0)
+anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[:temp_dim])   #!
+anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[:temp_dim, :])    #!
 mpids = list(anharmonic['mpid'])
 for i in range(len(anharmonic)):
     mpid = anharmonic.iloc[i]['mpid']

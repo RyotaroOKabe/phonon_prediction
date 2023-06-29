@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data   #, load_data
 from utils.utils_data_kappa import generate_gru_data_dict
 from utils.utils_model_gru import BandLoss, GraphNetworkGru, train
-from utils.utils_plot_gru import generate_dafaframe, plot_gru, plot_element_count_stack
+from utils.utils_plot_gru import generate_dafaframe_scalar, plot_scalar, plot_element_count_stack
 torch.set_default_dtype(torch.float64)
 if torch.cuda.is_available():
     device = 'cuda'
@@ -20,6 +20,7 @@ from torch_geometric.loader import DataLoader
 import pandas as pd
 import matplotlib as mpl
 from ase.visualize.plot import plot_atoms
+import random
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
@@ -36,7 +37,7 @@ print('torch device: ', device)
 print('model name: ', run_name)
 print('data_file: ', data_file)
 
-tr_ratio = 0.6
+tr_ratio = 1.0
 batch_size = 1
 k_fold = 5
 
@@ -47,20 +48,24 @@ print('batch size: ', batch_size)
 
 #%%
 max_iter = 200 #200
-lmax = 2 #2
-mul = 4 #4
-nlayers = 2 #5
-r_max = 4 #4
-number_of_basis = 10 #10
+lmax = 2 #random.randint(1, 3) #2
+mul = 15 #random.randint(3, 32) #4
+nlayers = 1 #random.randint(1, 5) #2
+r_max = 4 #random.randint(3, 6) #4
+number_of_basis = 6 #random.randint(5, 20) #10
 radial_layers = 1 #1
-radial_neurons = 100 #100
+radial_neurons = 121 #random.randint(30, 150) #100
 node_dim = 118
-node_embed_dim = 32 #32
+node_embed_dim = 78 #random.randint(4, 128) #32
 input_dim = 118
-input_embed_dim = 32 #32
+input_embed_dim = node_embed_dim #32
 irreps_out = '1x0e' #'2x0e+2x1e+2x2e'
-idx_temp = 30
-factor = 100000
+temp_dim = 50
+temp_idx_start = 30
+temp_idx_end = temp_idx_start + temp_dim
+temp_skip =2
+factor = 2000
+remove_above_factor=True
 
 print('\nmodel parameters')
 print('max iteration: ', max_iter)
@@ -77,7 +82,8 @@ print('input dimension: ', input_dim)
 print('input embedding dimension: ', input_embed_dim)
 print('irreduceble output representation: ', irreps_out)
 print('Div, mul factor: ', factor)
-print('temperature (index): ', idx_temp)    #!
+print('remove_above_factor: ', remove_above_factor)
+print('temperature start, end, dim, skip: ', (temp_idx_start, temp_idx_end, temp_dim, temp_skip))
 
 #%%
 loss_fn = BandLoss()
@@ -110,13 +116,13 @@ mpids = list(anharmonic['mpid'])
 for i in range(len(anharmonic)):
     mpid = anharmonic.iloc[i]['mpid']
     row = data[data['id']==mpid]
-    # print(row['structure'].item())
     anharmonic['structure'][i]=row['structure'].item()
-# anharmonic['gru'] = anharmonic.apply(lambda row: np.einsum('ij, ij, i->', row['gruneisen'], row['heat_capacity'][idx_temp,:,:], row['weight']) / 
-#                                   np.einsum('ij, i->', row['heat_capacity'][idx_temp,:,:], row['weight']), axis=1)
-anharmonic['gru']=anharmonic['kappa'].map(lambda x: np.max(np.sum(x[:, :3], axis=-1)/3))
-# anharmonic['gru'] = anharmonic.apply(lambda row: np.einsum('ij, ij, i->', row['gruneisen'], row['frequency'], row['weight']) / 
-#                                   np.einsum('ij, i->', row['frequency'], row['weight']), axis=1)
+anharmonic['gru']=anharmonic['kappa'].map(lambda x: np.max(np.sum(x[temp_idx_start:temp_idx_end, :3], axis=-1)/3))
+len0 = len(anharmonic['gru'])
+if remove_above_factor:
+    anharmonic = anharmonic[anharmonic['gru']<=factor]
+    len1 = len(anharmonic['gru'])
+    print('(length0, length1): ', [len0, len1])
 keys = anharmonic.keys()
 
 #%%
@@ -186,13 +192,13 @@ tr_loader = DataLoader(tr_set, batch_size = batch_size)
 te1_loader = DataLoader(te_set, batch_size = batch_size)
 
 # Generate Data Frame
-df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, factor)
-df_te = generate_dafaframe(model, te1_loader, loss_fn, device, factor)
+df_tr = generate_dafaframe_scalar(model, tr_loader, loss_fn, device, factor)
+df_te = generate_dafaframe_scalar(model, te1_loader, loss_fn, device, factor)
 
 # Plot the bands of TRAIN data
-plot_gru(df_tr, color=palette[0], header='./models/' + model_name, title='TRAIN', size=5, r2=True)
+plot_scalar(df_tr, color=palette[0], header='./models/' + model_name, title='TRAIN', name='kmax', size=15, r2=True)
 
 # Plot the bands of TEST data
-plot_gru(df_te, color=palette[0], header='./models/' + run_name, title='TEST', size=5, r2=True)
+plot_scalar(df_te, color=palette[0], header='./models/' + run_name, title='TEST', name='kmax', size=15, r2=True)
 
 # %%

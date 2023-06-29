@@ -108,6 +108,53 @@ def loss_dist(axl, ds, num, palette, xtiles, fontsize):
     axl.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
     return axl, cols
 
+
+# delete this function later
+def loss_distx(axl, ds, num, palette, xtiles, fontsize):
+    """_summary_
+
+    Args:
+        axl (_type_): _description_
+        ds (_type_): _description_
+        num (_type_): _description_
+        palette (_type_): _description_
+        xtiles (_type_): _description_
+        fontsize (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    x_min, x_max = ds['loss'].min(), ds['loss'].max()
+    x = np.linspace(x_min, x_max, 5000)
+    kde = gaussian_kde(list(ds['loss']))
+    p = kde.pdf(x)
+    axl.plot(x, p, color='black')
+    cols = palette[:num]
+    cols_rev = copy(cols)
+    cols_rev.reverse()
+    qs =  list(xtiles)[::-1] + [0]
+    for i in range(len(qs)-1):
+        # print('i: ', i)
+        # print('[qs[i], qs[i+1]]: ', [qs[i], qs[i+1]])
+        # print('p: ', p.shape)
+        xqs = np.arange(qs[i+1], qs[i], len(p))
+        # axl.fill_between(x=xqs, y1=np.zeros_like(p), y2=p, color=cols_rev[i], lw=0, alpha=0.5)
+        axl.fill_between(x, p, where = (x >= qs[i+1]) & (x <= qs[i]), color=cols_rev[i], lw=0, alpha=0.5)
+    axl.ticklabel_format(axis='x', style='sci', scilimits=(0,0))
+    # axl.invert_yaxis()
+    axl.set_yticks([])
+    axl.set_xscale('log')
+    axl.tick_params(axis='x', which='major', labelsize=fontsize, rotation=90)
+    axl.tick_params(axis='x', which='minor', labelsize=fontsize, rotation=90)
+    axl.xaxis.set_minor_formatter(FormatStrFormatter("%.5f"))
+    axl.xaxis.set_major_formatter(FormatStrFormatter("%.5f"))
+    # Remove the top and right spines
+    axl.spines['top'].set_visible(False)
+    axl.spines['right'].set_visible(False)
+    axl.spines['left'].set_visible(False)
+    return axl, cols
+
+
 def get_spectra(Hs, shifts, qpts):
     H = torch.sum(torch.mul(Hs.unsqueeze(1), torch.exp(2j*math.pi*torch.matmul(shifts, qpts.type(torch.complex128).t())).unsqueeze(-1).unsqueeze(-1)), dim = 0)
     eigvals = torch.linalg.eigvals(H)
@@ -165,6 +212,13 @@ def plot_bands(df_in, header,
     xtiles = np.quantile(ds['loss'].values, tiles)
     iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
     s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=False)) for k in range(1,num+1)])
+    # delete the lines below:
+    fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
+    axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
+    fig0.savefig(f"{header}_{title}_dist.png")
+    fig0.savefig(f"{header}_{title}_dist.pdf")
+    # delete up to this line
+    
     fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
     gs = axs[0,0].get_gridspec()
     # remove the underlying axes
@@ -218,6 +272,14 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
     xtiles = np.quantile(ds['loss'].values, tiles)
     iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
     s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=False)) for k in range(1,num+1)])
+    
+    # delete the lines below:
+    fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
+    axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
+    fig0.savefig(f"{header}_{title}_dist.png")
+    fig0.savefig(f"{header}_{title}_dist.pdf")
+    # delete up to this line
+    
     fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
     gs = axs[0,0].get_gridspec()
     # remove the underlying axes

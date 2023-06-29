@@ -59,6 +59,8 @@ node_embed_dim = 32 #32
 input_dim = 118
 input_embed_dim = 32 #32
 temp_dim = 30
+temp_idx_start = 10
+temp_idx_end = temp_idx_start + temp_dim
 temp_skip =2
 kappa_normalize = True
 irreps_out = f'{temp_dim//temp_skip}x0e' #'2x0e+2x1e+2x2e'
@@ -78,7 +80,7 @@ print('node attribute embedding dimension: ', node_embed_dim)
 print('input dimension: ', input_dim)
 print('input embedding dimension: ', input_embed_dim)
 print('irreduceble output representation: ', irreps_out)
-print('temperature dim, skip: ', (temp_dim, temp_skip))
+print('temperature start, end, dim, skip: ', (temp_idx_start, temp_idx_end, temp_dim, temp_skip))
 print('kappa_normalize: ', kappa_normalize)
 print('Div, mul factor: ', factor)
 
@@ -109,8 +111,10 @@ file = './data/anharmonic_fc_2.pkl'
 anharmonic = pkl.load(open(file, 'rb'))
 anharmonic['mpid'] = anharmonic['mpid'].map(lambda x: 'mp-' + str(x))
 anharmonic['structure'] = anharmonic['mpid'].map(lambda x: 0)
-anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[:temp_dim][::temp_skip])   #!
-anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[:temp_dim, :][::temp_skip, :])    #!
+# anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[:temp_dim][::temp_skip])   #!
+# anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[:temp_dim, :][::temp_skip, :])    #!
+anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[temp_idx_start:temp_idx_end][::temp_skip])   #!
+anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[temp_idx_start:temp_idx_end, :][::temp_skip, :])    #!
 mpids = list(anharmonic['mpid'])
 for i in range(len(anharmonic)):
     mpid = anharmonic.iloc[i]['mpid']

@@ -20,10 +20,12 @@ kMVN_2.py
 pred_zeolite.py
 ternary.py
 dos.py
+dos*
 zeo_opt.py
 kMVN_hermitian.py
 cutfill.py
 novgnn*
+kMVN_dos_intersection.py
 *gru.py
 *.sh
 22*

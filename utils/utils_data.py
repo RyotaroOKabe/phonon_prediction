@@ -6,12 +6,32 @@ import numpy as np
 import pickle as pkl
 from ase.neighborlist import neighbor_list
 from torch_geometric.data import Data
+from torch.utils.data import Dataset, Subset
 from ase import Atom
 import itertools
 from copy import copy
 
 default_dtype = torch.float64
 torch.set_default_dtype(default_dtype)
+
+def pkl_load(filename):
+    with open(filename, 'rb') as file:
+        loaded_dict = pkl.load(file)
+    return loaded_dict
+
+class CombinedDataset(Dataset):
+    def __init__(self, subsets):
+        self.subsets = subsets
+        self.total_length = sum(len(subset) for subset in subsets) 
+    def __len__(self):
+        return self.total_length
+    def __getitem__(self, idx):
+        # Find the appropriate subset for the given index
+        for subset in self.subsets:
+            if idx < len(subset):
+                return subset[idx]
+            idx -= len(subset)    
+        raise IndexError("Index out of range")
 
 def doub(array):
     return np.concatenate([array]*2, axis = 0)

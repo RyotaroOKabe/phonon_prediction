@@ -5,7 +5,7 @@ import pickle as pkl
 import os
 from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data   #, load_data
-from utils.utils_data_kappa import generate_kappa_data_dict, generate_gru_data_dict
+from utils.utils_data_kappa import generate_kappa_data_dict, generate_gru_data_dict, pkl_load
 from utils.utils_model_kappa import BandLoss, GraphNetworkKappa, train
 from utils.utils_plot_kappa import generate_dafaframe, plot_kappa
 from utils.utils_model_gru import BandLoss, GraphNetworkGru  #!
@@ -150,6 +150,7 @@ print('learning rate scheduler: exponentialLR')
 print('schedule factor: ', schedule_gamma)
 
 #%%
+# 1.5k materials
 download_data = True
 if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
@@ -158,37 +159,30 @@ if download_data:
     os.system(f'cd {data_dir}; tar -xf 9850858')
     os.system(f'rm -r {data_dir}/9850858*')
 data = load_band_structure_data(data_dir, raw_dir, data_file)
+
+# load anharmonic phonon data from abinit calculation
 file = './data/anharmonic_fc_2.pkl'
 anharmonic = pkl.load(open(file, 'rb'))
 anharmonic['mpid'] = anharmonic['mpid'].map(lambda x: 'mp-' + str(x))
 anharmonic['structure'] = anharmonic['mpid'].map(lambda x: 0)
-# anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[:temp_dim][::temp_skip])   #!
-# anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[:temp_dim, :][::temp_skip, :])    #!
 anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[temp_idx_start:temp_idx_end][::temp_skip])   #!
 anharmonic['kappa'] = anharmonic['kappa'].map(lambda x: x[temp_idx_start:temp_idx_end, :][::temp_skip, :])    #!
 mpids = list(anharmonic['mpid'])
 for i in range(len(anharmonic)):
     mpid = anharmonic.iloc[i]['mpid']
     row = data[data['id']==mpid]
-    # print(row['structure'].item())
     anharmonic['structure'][i]=row['structure'].item()
-
-#!
-anharmonic['gru']=anharmonic['kappa'].map(lambda x: np.max(np.sum(x[:, :3], axis=-1)/3))
+anharmonic['gru']=anharmonic['kappa'].map(lambda x: np.max(np.sum(x[:, :3], axis=-1)/3))    # For predicting the highest point of kappa(T), we use the same model as Gruneisen parameter prediction. 
 len0 = len(anharmonic['gru'])
 if remove_above_factor1:
     anharmonic = anharmonic[anharmonic['gru']<=factor1]
     len1 = len(anharmonic['gru'])
     print('(length0, length1): ', [len0, len1])
-
 keys = anharmonic.keys()
 
 #%%
-def load_dict_from_pkl(filename):
-    with open(filename, 'rb') as file:
-        loaded_dict = pkl.load(file)
-    return loaded_dict
-mp_data = load_dict_from_pkl('./data/mp_full.pkl')
+# load material structures from MP
+mp_data = pkl_load('./data/mp_full.pkl')
 mpids = sorted(list(mp_data.keys()))
 
 df = pd.DataFrame({})
@@ -200,13 +194,11 @@ for i, mpid in enumerate(mpids[:2000] + ['mp-1639']):
             cell=pstruct.lattice.matrix.copy(), pbc=True) 
     row['mpid'] = mpid
     row['structure'] = [astruct]
-    row['temperature'] = [anharmonic['temperature'][0]] #!
+    row['temperature'] = [anharmonic['temperature'][0]]
     row['kappa'] = [np.zeros((temp_dim//temp_skip, 3))]
     row['loss'] = np.random.rand(1)
     dfn = pd.DataFrame(data = row)
     df = pd.concat([df, dfn], ignore_index = True)
-
-
 
 df['gru']=df['kappa'].map(lambda x: np.max(np.sum(x[:, :3], axis=-1)/3))
 
@@ -214,6 +206,7 @@ df['gru']=df['kappa'].map(lambda x: np.max(np.sum(x[:, :3], axis=-1)/3))
 mpdata_dict = generate_kappa_data_dict(data_dir, run_name, df, r_max, factor, kappa_normalize)
 mpdata_dict1 = generate_gru_data_dict(data_dir, run_name, df, r_max, factor1)
 
+# for normalized kappa
 idx_te = list(range(len(df)))
 data_set = torch.utils.data.Subset(list(mpdata_dict.values()), range(len(mpdata_dict)))
 te_set = torch.utils.data.Subset(data_set, idx_te)

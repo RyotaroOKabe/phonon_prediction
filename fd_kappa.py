@@ -186,7 +186,7 @@ mp_data = pkl_load('./data/mp_full.pkl')
 mpids = sorted(list(mp_data.keys()))
 
 df = pd.DataFrame({})
-for i, mpid in enumerate(mpids[:2000] + ['mp-1639']):
+for i, mpid in enumerate(mpids[:200] + ['mp-1639', 'mp-66']):
     row = dict()
     pstruct = mp_data[mpid]
     astruct = Atoms(list(map(lambda x: x.symbol, pstruct.species)) , # list of symbols got from pymatgen

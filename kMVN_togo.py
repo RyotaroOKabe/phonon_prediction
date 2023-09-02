@@ -24,7 +24,7 @@ palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
-target = ['H', 'Li', 'F']
+target = ['H']
 file_extra ='./data/kyoto/df_40_low.pkl'
 model_name0 = "kmvn_230103-023724"
 print('target elements: ', target)
@@ -250,9 +250,9 @@ plot_bands(df_te, header='./models/' + model_name, title='TEST_add', n=6, m=2, p
 # df_te0 and df_te
 # same mpid (or same index)
 # plot the difference of the band structures
-# mpid_test = 'mp-697133'
-# df_target0 = df_te0[df_te0['name'].apply(lambda x: any([t in x for t in target]))]
-# df_target = df_te[df_te['name'].apply(lambda x: any([t in x for t in target]))]
+mpid_test = 'mp-697133'
+df_target0 = df_te0[df_te0['name'].apply(lambda x: any([t in x for t in target]))]
+df_target = df_te[df_te['name'].apply(lambda x: any([t in x for t in target]))]
 # rband =df_te0[df_te0['id']==mpid_test]['real_band'].item()
 # band0 =df_te0[df_te0['id']==mpid_test]['output_test'].item()
 # band =df_te[df_te['id']==mpid_test]['output_test'].item()

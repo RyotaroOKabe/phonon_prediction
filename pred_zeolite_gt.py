@@ -289,6 +289,8 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
 # Generate Data Frame
 df_tr = generate_dafaframe(model, tr_loader, loss_fn, device)
 df_te = generate_dafaframe(model, te1_loader, loss_fn, device)
+df_te.to_pickle('./models/' + model_name + '_zeolite_GT'.pkl)
+
 #%%
 lent = len(df_te)
 print('df_te: ', lent)

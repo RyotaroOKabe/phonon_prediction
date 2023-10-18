@@ -11,11 +11,14 @@ kMVN_alloy.ipynb
 kMVN_data.py
 kMVN_loss.py
 kMVN_RO.ipynb
+kMVN_M3GNet.ipynb
 VVN_RO.ipynb
 kMVN_nonneg*
 kMVN_nomass*
 kMVN_neg*
 kMVN_sample*
+kMVN_gwd.py
+VVN_gwd.py
 kMVN_2.py
 pred_zeolite.py
 ternary.py

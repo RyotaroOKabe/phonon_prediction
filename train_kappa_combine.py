@@ -148,7 +148,7 @@ print('learning rate scheduler: exponentialLR')
 print('schedule factor: ', schedule_gamma)
 
 #%%
-download_data = True
+download_data = False
 if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
     os.system(f'rm -r {data_dir}/phonon/')
@@ -156,8 +156,9 @@ if download_data:
     os.system(f'cd {data_dir}; tar -xf 9850858')
     os.system(f'rm -r {data_dir}/9850858*')
 data = load_band_structure_data(data_dir, raw_dir, data_file)
-file = './data/anharmonic_fc_2.pkl'
-anharmonic = pkl.load(open(file, 'rb'))
+files = ['./data/anharmonic_fc_2.pkl', './data/anharmonic_fc_3.pkl']
+anharmonic_dfs  = [pkl.load(open(file, 'rb')) for file in files]
+anharmonic = pd.concat(anharmonic_dfs, ignore_index=True)
 anharmonic['mpid'] = anharmonic['mpid'].map(lambda x: 'mp-' + str(x))
 anharmonic['structure'] = anharmonic['mpid'].map(lambda x: 0)
 # anharmonic['temperature'] = anharmonic['temperature'].map(lambda x: x[:temp_dim][::temp_skip])   #!
@@ -195,9 +196,9 @@ te_num = num - sum(tr_nums)
 #     for idx in idx_tr: f.write(f"{idx}\n")
 # with open(f'./data/idx_{run_name}_te.txt', 'w') as f: 
 #     for idx in idx_te: f.write(f"{idx}\n")
-idx_tr = list(range(131))
-idx_tr.remove(anharmonic[anharmonic['gru']==anharmonic['gru'].max()].index.item())
-idx_te = list(range(131))
+idx_tr = list(range(sum(tr_nums)))
+# idx_tr.remove(anharmonic[anharmonic['gru']==anharmonic['gru'].max()].index.item())
+idx_te = list(range(num))
 
 #%%
 # activate this tab to load train/valid/test indices

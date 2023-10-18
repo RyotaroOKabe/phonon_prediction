@@ -8,7 +8,6 @@ from ase.neighborlist import neighbor_list
 from torch_geometric.data import Data
 from torch.utils.data import Dataset, Subset
 from ase import Atom
-import mendeleev as md
 import itertools
 from copy import copy
 
@@ -73,61 +72,21 @@ def get_node_attr(atomic_numbers, n):
     z += temp * n
     return torch.from_numpy(np.array(z, dtype = np.float64))
 
-
-def atom_feature(atomic_number: int, descriptor):
-    """_summary_
-
-    Args:
-        atomic_number (_int_): atomic number 
-        descriptor (_'str'_): descriptor type. select from ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
-
-    Returns:
-        _type_: descriptor
-    """
-    if descriptor=='mass':  # Atomic Mass (amu)
-        feature = Atom(atomic_number).mass
-    elif descriptor=='number':  # atomic number
-        feature = atomic_number
-    else:
-        ele = md.element(atomic_number) # use mendeleev
-        if descriptor=='radius':    # Atomic Radius (pm)
-            feature = ele.atomic_radius
-        elif descriptor=='en': # Electronegativity (Pauling)
-            feature = ele.en_pauling
-        elif descriptor=='ie':  # Ionization Energy (eV)
-            feature = ele.ionenergies[1]
-        elif descriptor=='dp':  # Dipole Polarizability (Å^3)
-            feature = ele.dipole_polarizability
-        else:   # no feature
-            feature = 1
-    return feature
-
-def get_input(atomic_numbers, n, descriptor='mass'):
-    """
-
-    Args:
-        atomic_numbers (_type_): _description_
-        n (_type_): _description_
-        descriptor (str, optional): descriptor for initial node features. Defaults to 'mass'. 
-                ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
-
-    Returns:
-        _type_: _description_
-    """
+def get_input(atomic_numbers, n):
     x = []
     for atomic_number in atomic_numbers:
-        atomic = [0.0] * 118         
-        atomic[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
+        atomic = [0.0] * 118
+        atomic[atomic_number - 1] = Atom(atomic_number).mass
         x.append(atomic)
     temp = []
     for atomic_number in atomic_numbers:
         atomic = [0.0] * 118
-        atomic[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
+        atomic[atomic_number - 1] = Atom(atomic_number).mass
         temp += [atomic] * len(atomic_numbers)
     x += temp * n
     return torch.from_numpy(np.array(x, dtype = np.float64))
 
-def build_data(id, structure, qpts, band_structure, r_max, descriptor='mass'):
+def build_data(id, structure, qpts, band_structure, r_max):
     symbols = structure.symbols
     positions = torch.from_numpy(structure.positions.copy())
     numb = len(positions)
@@ -135,7 +94,7 @@ def build_data(id, structure, qpts, band_structure, r_max, descriptor='mass'):
     edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
     edge_src, edge_dst, edge_shift, edge_vec, edge_len, ucs = create_virtual_nodes(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
     z = get_node_attr(structure.arrays['numbers'], len(ucs.shift_reverse))
-    x = get_input(structure.arrays['numbers'], len(ucs.shift_reverse), descriptor)
+    x = get_input(structure.arrays['numbers'], len(ucs.shift_reverse))
     node_deg = get_node_deg(edge_dst, len(x))
     y = torch.from_numpy(band_structure/1000).unsqueeze(0)
     data = Data(id = id,
@@ -157,7 +116,7 @@ def build_data(id, structure, qpts, band_structure, r_max, descriptor='mass'):
                 numb = numb)
     return data
 
-def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descriptor='mass'):
+def generate_band_structure_data_dict(data_dir, run_name, data, r_max):
     data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
     if len(glob.glob(data_dict_path)) == 0: 
         data_dict = dict()
@@ -167,7 +126,7 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descripto
         band_structures = data['band_structure']
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
             # print(id)
-            data_dict[id] = build_data(id, structure, qpts, band_structure, r_max, descriptor)
+            data_dict[id] = build_data(id, structure, qpts, band_structure, r_max)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))
@@ -227,15 +186,15 @@ def get_node_attr_vvn(atomic_numbers):
         z.append(node_attr)
     return torch.from_numpy(np.array(z, dtype = np.float64))
 
-def get_node_feature_vvn(atomic_numbers, descriptor='mass'):
+def get_node_feature_vvn(atomic_numbers):
     x = []
     for atomic_number in atomic_numbers:
         node_feature = [0.0] * 118
-        node_feature[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
+        node_feature[atomic_number - 1] = Atom(atomic_number).mass
         x.append(node_feature)
     return torch.from_numpy(np.array(x, dtype = np.float64))
 
-def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe', descriptor='mass'):
+def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe'):
     symbols = list(structure.symbols).copy()
     positions = torch.from_numpy(structure.get_positions().copy())
     numb = len(positions)
@@ -243,7 +202,7 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe', descriptor=
     _edge_src, _edge_dst, _edge_shift, _, _ = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
     edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, vnelem, _edge_src, _edge_dst, _edge_shift)
     z = get_node_attr_vvn(structure_vn.arrays['numbers'])
-    x =  get_node_feature_vvn(structure_vn.arrays['numbers'], descriptor)
+    x =  get_node_feature_vvn(structure_vn.arrays['numbers'])
     node_deg = get_node_deg(edge_dst, len(x))
     y = torch.from_numpy(gphonon/1000).unsqueeze(0)
     data = Data(id = id,
@@ -267,7 +226,7 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe', descriptor=
     return data
 
 
-def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26, descriptor='mass'):
+def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26):
     data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
     vnelem = Atom(vn_an).symbol #!
     if len(glob.glob(data_dict_path)) == 0:
@@ -279,7 +238,7 @@ def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26, descript
         for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
             # print(id)
             gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
-            data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max, vnelem, descriptor)
+            data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max, vnelem)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))

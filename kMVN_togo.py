@@ -24,7 +24,7 @@ palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
-target = ['H']
+target = ['H', 'Li', 'F']
 file_extra ='./data/kyoto/df_40_low.pkl'
 model_name0 = "kmvn_230103-023724"
 print('target elements: ', target)

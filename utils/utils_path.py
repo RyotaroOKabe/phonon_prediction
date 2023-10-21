@@ -6,7 +6,7 @@ def get_structure(astruct):
     numbers = astruct.numbers.tolist()
     return (cell, positions, numbers)
 
-def get_path(astruct, res=0.05):
+def get_path(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0):
     """
     If you do not have 
 
@@ -18,7 +18,7 @@ def get_path(astruct, res=0.05):
         _type_: _description_
     """
     struct = get_structure(astruct)
-    getpath = seekpath.getpaths.get_path(struct, with_time_reversal=True, recipe='hpkot', threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0)
+    getpath = seekpath.getpaths.get_path(struct, with_time_reversal=True, recipe='hpkot', threshold=threshold, symprec=symprec, angle_tolerance=angle_tolerance)
 
     pcoords = getpath['point_coords']
     path = getpath['path']
@@ -96,7 +96,7 @@ def get_path(astruct, res=0.05):
                 'point_list': point_list, 'sym_points': sym_points, 'break_from': break_from,
                 'qpts': qpts, 'dist_list':dist_list, 'qticks': qticks}
     return out_dict
-
+    
 
 # def get_band_from_qpts(qpts):
     

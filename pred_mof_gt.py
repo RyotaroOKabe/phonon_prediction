@@ -1,6 +1,6 @@
 #%%
 """
-https://www.notion.so/230402-zeolite-phonon-ba985314a45441749f258234ec7931c8
+https://www.notion.so/230918-how-to-complete-the-task-of-zeolite-s-phonon-1-1-2-2d74a2ad49d34761a34580df37ff4df0?pvs=4#bced379e69c34908aa44eba786a3f6bf
 
 """
 import torch
@@ -16,7 +16,7 @@ from utils.utils_plot_path import plot_bands_qlabels, simname
 from utils.utils_plot import get_spectra
 torch.set_default_dtype(torch.float64)
 if torch.cuda.is_available():
-    device = 'cuda:7'
+    device = 'cuda'
 else:
     device = 'cpu'
 seed=None #42
@@ -27,6 +27,7 @@ import pandas as pd
 import matplotlib as mpl
 from ase.visualize.plot import plot_atoms
 from ase import Atom, Atoms
+from pymatgen.core import Structure
 from utils.utils_path import get_path
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -96,107 +97,48 @@ print('schedule factor: ', schedule_gamma)
 # load zeolite data 
 import glob
 from os.path import join as opj
-zeo_dir = '/data1/rokabe/zeolite'   #!
-NPZPATH = opj(zeo_dir, 'npz')
-files = glob.glob(opj(NPZPATH, '*.npz'))
-# v = np.load(files[0])
-# print(v['xyz'].shape)
-# print(v['lattice'].shape)
-# print(v['numbers'])
+mof5 = Structure.from_file('./data/MOF5.cif')
+# vis_structure(mof5)
 
-#%%
-df = pd.DataFrame({})
-idx_zeo = -1
-for i, file in enumerate(files):
-    Data = dict()
-    name = file[len(NPZPATH)+1:-4]
-    npdata = np.load(file)
-    ccoords = npdata['xyz'][idx_zeo, :, :]
-    lattice = npdata['lattice'][idx_zeo, :,:]
-    species = npdata['numbers']
-    natms = len(species)
-    symbols = [Atom(nb).symbol for nb in species]
-    atoms = Atoms(symbols, positions = ccoords,
-                                cell = lattice,
-                                pbc=True) 
-    out_dict = get_path(atoms)
-    qpts = np.array(out_dict['qpts'])
-    qticks = out_dict['qticks']
-    Data['id'] = name
-    Data['structure'] = [atoms]
-    Data['qpts'] = [qpts]
-    Data['qticks'] = [qticks]
-    Data['band_structure'] = [np.zeros((len(qpts), 3*natms))]
-    dfn = pd.DataFrame(data = Data)
-    df = pd.concat([df, dfn], ignore_index = True)
+plt.show()
+plt.close()
+# pymatgen > ase.Atom
+def pymatgen2ase(pstruct):
+    return Atoms(list(map(lambda x: x.symbol, pstruct.species)),
+                    positions = pstruct.cart_coords.copy(),
+                    cell = pstruct.lattice.matrix.copy(), 
+                    pbc=True)
+# sga = SpacegroupAnalyzer(mof5)
+# sga.get_space_group_number(), sga.get_space_group_symbol()
+amof5 = pymatgen2ase(mof5)
+# gpath_mof = get_path(amof5)
+# gpath_mof
 
 #%%
 # orthrombic cell
-orth_point_coords = {
+mof5_qcoords = {
     'Gamma': [0.0, 0.0, 0.0],
-    'X': [0.5, 0.0, 0.0],
-    'Y': [0.0, 0.5, 0.0],
-    'Z': [0.0, 0.0, 0.5],
-    'T': [0.0, 0.5, 0.5],
-    'U': [0.5, 0.0, 0.5],
-    'S': [0.5, 0.5, 0.0],
-    'R': [0.5, 0.5, 0.5],
+    'K': [0.375, 0.375, 0.75],
+    'L': [0.5, 0.5, 0.5],
+    'U': [0.625, 0.25, 0.625],
+    'W': [0.5, 0.25, 0.75],
+    'W2': [0.75, 0.25, 0.5],
+    'X': [0.5, 0.0, 0.5],
 }
-orth_path = [
-    ('Z', 'Gamma'), 
-    ('Gamma', 'S'),
-    ('S', 'R'),
-    ('R', 'Z'),
-    ('Z', 'T'),
-    ('T', 'Y'),
-    ('Y', 'Gamma')
+mof5_qpath = [
+    ('Gamma', 'X'),
+    ('X', 'W'),
+    ('W', 'K'),
+    ('K', 'Gamma'),
+    ('Gamma', 'L'),
+    ('L', 'U'),
+    ('U', 'W'),
+    ('W', 'L'),
+    ('L', 'K'),
+    ('K', 'X'),
 ]
 
-orth_path_points = [20 for _ in orth_path]
-
-# hexagonal cell
-hex_point_coords = {
-    'Gamma': [0.0, 0.0, 0.0],
-    'A': [0.0, 0.0, 0.5],
-    'K': [2/3, 1/3, 0.0],
-    'H': [2/3, 1/3, 1/2],
-    'M': [0.5, 0.0, 0.0],
-    'L': [0.5, 0.0, 0.5],
-}
-
-hex_path = [
-    ('A', 'H'),
-    ('H', 'L'),
-    ('L', 'A'),
-    ('A', 'Gamma'),
-    ('Gamma', 'K'),
-    ('K', 'M'),
-    ('M', 'Gamma'),
-]
-
-hex_path_points =[19,11,15,36,29,15,17]
-
-# tetragonal cell
-tet_point_coords = {
-    'Gamma': [0.0, 0.0, 0.0],
-    'X': [0.5, 0.0, 0.0],
-    'M': [0.5, 0.5, 0.0],
-    'Z': [0.0, 0.0, 0.5],
-    'R': [0.5, 0.0, 0.5],
-    'A': [0.5, 0.5, 0.5],
-}
-
-tet_path = [
-    ('Gamma', 'M'),
-    ('M', 'X'),
-    ('X', 'Gamma'),
-    ('Gamma', 'Z'),
-    ('Z', 'A'),
-    ('A', 'R'),
-    ('R', 'Z'),
-]
-
-tet_path_points =[24, 17, 17, 18, 24, 17, 17]
+mof5_nqpts = [22, 12, 7, 22, 20, 14, 7, 16, 14, 17]
 
 def qpts_path(pcoords, path, npoints):
     qpts = []
@@ -229,26 +171,22 @@ def qpts_path(pcoords, path, npoints):
 
 
 #%%
-boz_set = qpts_path(orth_point_coords, orth_path, orth_path_points)
-etr_set = qpts_path(hex_point_coords, hex_path, hex_path_points)
-edi_set = qpts_path(tet_point_coords, tet_path, tet_path_points)
-targets = {'BOZ': boz_set, 'ETR': etr_set, 'EDI': edi_set}
+mof5_set = qpts_path(mof5_qcoords, mof5_qpath, mof5_nqpts)
+targets = {'MOF-5': [amof5, mof5_set]}
 df1 = pd.DataFrame({})
 for k, v in targets.items():
     row = dict()
-    row0 = df[df['id']==k]
     row['id'] = k
-    astruct = row0['structure'].item()
+    astruct = targets[k][0]
     row['structure'] = [astruct]
     natm = len(astruct.get_positions())
-    qpts, qticks = targets[k][0], targets[k][1]
+    qpts, qticks = targets[k][1][0], targets[k][1][1]
     row['qpts'] = [qpts]
     row['qticks'] = [qticks]
     row['band_structure'] = [np.zeros((len(qpts), 3*natm))]
     dfn = pd.DataFrame(data = row)
     df1 = pd.concat([df1, dfn], ignore_index = True)
 
-df1 = df1.iloc[[-1]]
 data = df1 #df[df['id'].isin(['BOZ', 'ETR'])].reset_index()
 # r_max = 3   #!
 data_dict = generate_band_structure_data_dict(data_dir, run_name, data, r_max)
@@ -330,19 +268,18 @@ zpalette = ['#43AA8B' for _ in range(3)]
 # plot_bands_qlabels(df_te, header='./models/' + model_name + '_zeolite', 
 #            title='TEST', n=1, m=2, windowsize=(4,3), palette=zpalette, 
 #            gtruth=False, datadf=data)
-invcm2thz = 0.030  # https://www.home.uni-osnabrueck.de/apostnik/Notes/Phonon_freq_units.pdf
 
-fig, axs = plt.subplots(1,2, figsize=(11, 5))
+fig, axs = plt.subplots(1,2, figsize=(10, 5))
 ds = df_te
 fontsize = 10
 header = './models/' + model_name + '_zeolite_GT'
 title = 'TEST'
 for i in range(len(ds)):
     ax = axs[i]
-    realb = ds.iloc[i]['real_band']*invcm2thz
-    predb = ds.iloc[i]['output_test']*invcm2thz
+    realb = ds.iloc[i]['real_band']
+    predb = ds.iloc[i]['output_test']
     xpts = realb.shape[0]
-    ax.plot(range(xpts), predb, color='#4fa3e7', linewidth=1)
+    ax.plot(range(xpts), predb, color='#43AA8B', linewidth=1)
     ax.set_title(f"[${ds.iloc[i]['id']}$] {simname(ds.iloc[i]['name']).translate(sub)}", fontsize=fontsize*1.8)
     min_y1, max_y1 = np.min(realb), np.max(realb)
     min_y2, max_y2 = np.min(predb), np.max(predb)
@@ -350,7 +287,6 @@ for i in range(len(ds)):
     max_y = max([max_y1, max_y2])
     width_y = max_y - min_y
     ax.set_ylim(min_y-0.05*width_y, max_y+0.05*width_y)
-    ax.set_xlim(0, predb.shape[0])
     labelsize = fontsize*1.5
     ax.tick_params(axis='y', which='major', labelsize=labelsize)
     ax.tick_params(axis='y', which='minor', labelsize=labelsize)
@@ -358,19 +294,14 @@ for i in range(len(ds)):
     qlabels = df1[df1['id']==ds.iloc[i]['id']]['qticks'].item()
         # print(qlabels)
     ax.set_xticks(range(xpts), qlabels, fontsize=labelsize)
-    # even_yticks = [tick for tick in range(int(min_y), int(max_y) + 1) if tick % 2 == 0]
-
-    # # Set the yticks to display only even numbers
-    # ax.set_yticks(even_yticks)
-    ax.set_ylabel('Frequency (THz)', fontsize=18)
     ax.tick_params(bottom = False)
 
 fig.tight_layout()
 fig.subplots_adjust(hspace=0.6)
 fig.patch.set_facecolor('white')
 if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-fig.savefig(f"{header}_{title}_bands2.png")
-fig.savefig(f"{header}_{title}_bands2.pdf")
+fig.savefig(f"{header}_{title}_bands.png")
+fig.savefig(f"{header}_{title}_bands.pdf")
 print(f"{header}_{title}_bands.pdf")
 
 

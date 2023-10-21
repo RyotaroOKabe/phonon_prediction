@@ -94,9 +94,9 @@ print('remove_above_factor: ', remove_above_factor)
 #%%
 print('parameters for kappa max')
 max_iter1 = 50 #200
-lmax1 = random.randint(2, 3) #2
+lmax1 = random.randint(1, 3) #2
 mul1 = random.randint(3, 32) #4
-nlayers1 = random.randint(3, 6) #2
+nlayers1 = random.randint(1, 5) #2
 r_max1 = random.randint(3, 6) #4
 number_of_basis1 = random.randint(5, 20) #10
 radial_layers1 = 1 #1

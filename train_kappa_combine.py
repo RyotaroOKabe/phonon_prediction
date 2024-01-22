@@ -93,7 +93,7 @@ print('Div, mul factor: ', factor)
 print('remove_above_factor: ', remove_above_factor)
 #%%
 print('parameters for kappa max')
-max_iter1 = 50 #200
+max_iter1 = 100 #200
 lmax1 = random.randint(2, 3) #2
 mul1 = random.randint(3, 32) #4
 nlayers1 = random.randint(3, 6) #2
@@ -113,6 +113,7 @@ kappa_normalize1 = kappa_normalize
 irreps_out1 = '1x0e'
 factor1 = 2000
 remove_above_factor1=False
+sort_anharmonic = True
 
 print('\nmodel parameters')
 print('max iteration: ', max_iter1)
@@ -132,6 +133,7 @@ print('temperature start, end, dim, skip: ', (temp_idx_start1, temp_idx_end1, te
 print('kappa_normalize: ', kappa_normalize1)
 print('Div, mul factor (max): ', factor1)
 print('remove_above_factor: ', remove_above_factor)
+print('sort_anharmonic: ', sort_anharmonic)
 
 #%%
 loss_fn = BandLoss()
@@ -182,13 +184,17 @@ if remove_above_factor1:
 
 keys = anharmonic.keys()
 
+if sort_anharmonic:
+    anharmonic=anharmonic.sort_values('gru', ascending=True)
+
 #%%
 # data = load_band_structure_data(data_dir, raw_dir, data_file)
 data_dict = generate_kappa_data_dict(data_dir, run_name, anharmonic, r_max, factor, kappa_normalize)
 data_dict1 = generate_gru_data_dict(data_dir, run_name, anharmonic, r_max, factor1)
 
 #%%
-num = len(data_dict)
+sub = 8 #6
+num = len(data_dict) -sub
 tr_nums = [int((num * tr_ratio)//k_fold)] * k_fold
 te_num = num - sum(tr_nums)
 # idx_tr, idx_te = train_test_split(range(num), test_size=te_num, random_state=seed)

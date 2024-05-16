@@ -64,18 +64,18 @@ print('batch size: ', batch_size)
 ##########################
 
 max_iter = 200 #200
-lmax = random.randint(0, 2) #2
-mul = random.randint(1, 5) #16
-nlayers = random.randint(1, 5) #2
-r_max = random.randint(4, 8) #4
-number_of_basis = random.randint(5, 20) #10
-radial_layers = random.randint(1, 2) #1
-radial_neurons = random.randint(50, 100) #100
+lmax = 2    #random.randint(0, 2) #2
+mul = 16    # random.randint(1, 5) #16
+nlayers = 2 # random.randint(1, 5) #2
+r_max = 4   # random.randint(4, 8) #4
+number_of_basis = 10    #random.randint(5, 20) #10
+radial_layers = 1   #random.randint(1, 2) #1
+radial_neurons = 100    #random.randint(50, 100) #100
 node_dim = 118
-node_embed_dim = random.randint(8, 32) #16
+node_embed_dim = 16 #random.randint(8, 32) #16
 input_dim = 118
-input_embed_dim = random.randint(8, 32) #16
-vn_an = random.randint(1, 118) #26
+input_embed_dim = 16    # random.randint(8, 32) #16
+vn_an = 26  #random.randint(1, 118) #26
 irreps_out = '1x0e'
 option='vvn'
 

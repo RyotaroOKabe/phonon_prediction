@@ -6,7 +6,7 @@ def get_structure(astruct):
     numbers = astruct.numbers.tolist()
     return (cell, positions, numbers)
 
-def get_path(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0):
+def get_path(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0, nongamma=False):
     """
     If you do not have 
 
@@ -86,7 +86,10 @@ def get_path(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=
             if qlabel=="GAMMA":
                 qticks.append("$\Gamma$")
             else: 
-                qticks.append("") 
+                if nongamma:
+                    qticks.append(qlabel)
+                else:
+                    qticks.append("") 
                 
         else: 
             qticks.append("") 

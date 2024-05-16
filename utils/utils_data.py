@@ -15,6 +15,20 @@ from copy import copy
 default_dtype = torch.float64
 torch.set_default_dtype(default_dtype)
 
+class MD():
+    def __init__(self):
+        self.radius, self.pauling, self.ie, self.dip = {}, {}, {}, {}
+        for atomic_number in range(1, 119):
+            ele = md.element(atomic_number)
+            # print(str(ele))
+            self.radius[atomic_number] = ele.atomic_radius
+            self.pauling[atomic_number] = ele.en_pauling
+            ie_dict = ele.ionenergies
+            self.ie[atomic_number] = ie_dict[min(list(ie_dict.keys()))] if len(ie_dict)>0 else 0
+            self.dip[atomic_number] = ele.dipole_polarizability
+
+md_class = MD()
+
 def pkl_load(filename):
     with open(filename, 'rb') as file:
         loaded_dict = pkl.load(file)
@@ -74,6 +88,34 @@ def get_node_attr(atomic_numbers, n):
     return torch.from_numpy(np.array(z, dtype = np.float64))
 
 
+# def atom_feature(atomic_number: int, descriptor):
+#     """_summary_
+
+#     Args:
+#         atomic_number (_int_): atomic number 
+#         descriptor (_'str'_): descriptor type. select from ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
+
+#     Returns:
+#         _type_: descriptor
+#     """
+#     if descriptor=='mass':  # Atomic Mass (amu)
+#         feature = Atom(atomic_number).mass
+#     elif descriptor=='number':  # atomic number
+#         feature = atomic_number
+#     else:
+#         ele = md.element(atomic_number) # use mendeleev
+#         if descriptor=='radius':    # Atomic Radius (pm)
+#             feature = ele.atomic_radius
+#         elif descriptor=='en': # Electronegativity (Pauling)
+#             feature = ele.en_pauling
+#         elif descriptor=='ie':  # Ionization Energy (eV)
+#             feature = ele.ionenergies[1]
+#         elif descriptor=='dp':  # Dipole Polarizability (Å^3)
+#             feature = ele.dipole_polarizability
+#         else:   # no feature
+#             feature = 1
+#     return feature
+
 def atom_feature(atomic_number: int, descriptor):
     """_summary_
 
@@ -89,15 +131,15 @@ def atom_feature(atomic_number: int, descriptor):
     elif descriptor=='number':  # atomic number
         feature = atomic_number
     else:
-        ele = md.element(atomic_number) # use mendeleev
+        # ele = md.element(atomic_number) # use mendeleev
         if descriptor=='radius':    # Atomic Radius (pm)
-            feature = ele.atomic_radius
+            feature = md_class.radius[atomic_number]
         elif descriptor=='en': # Electronegativity (Pauling)
-            feature = ele.en_pauling
+            feature = md_class.pauling[atomic_number]
         elif descriptor=='ie':  # Ionization Energy (eV)
-            feature = ele.ionenergies[1]
+            feature = md_class.ie[atomic_number]
         elif descriptor=='dp':  # Dipole Polarizability (Å^3)
-            feature = ele.dipole_polarizability
+            feature = md_class.dip[atomic_number]
         else:   # no feature
             feature = 1
     return feature

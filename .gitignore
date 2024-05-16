@@ -19,7 +19,10 @@ kMVN_neg*
 kMVN_sample*
 kMVN_gwd.py
 VVN_gwd.py
+kMVN_ss.ipynb
+kMVN_alloy.ipynb
 kMVN_2.py
+kMVN_time.py
 pred_zeolite.py
 ternary.py
 dos.py

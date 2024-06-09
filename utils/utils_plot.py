@@ -16,9 +16,6 @@ import sklearn
 import time
 from tqdm import tqdm
 palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
-datasets = ['train', 'valid', 'test']
-colors = dict(zip(datasets, palette[:-1]))
-cmap = mpl.colors.LinearSegmentedColormap.from_list('cmap', [palette[k] for k in [0,2,1]])
 
 
 def loss_plot(model_file, device, fig_file):
@@ -157,7 +154,7 @@ def loss_distx(axl, ds, num, palette, xtiles, fontsize):
     return axl, cols
 
 
-def get_spectra(Hs, shifts, qpts):
+def get_spectra_(Hs, shifts, qpts):
     H = torch.sum(torch.mul(Hs.unsqueeze(1), torch.exp(2j*math.pi*torch.matmul(shifts, qpts.type(torch.complex128).t())).unsqueeze(-1).unsqueeze(-1)), dim = 0)
     eigvals = torch.linalg.eigvals(H)
     abx = torch.abs(eigvals)
@@ -179,7 +176,7 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
                 start_time = time.time()
                 if option in ['kmvn', 'mvn']:
                     Hs, shifts = model(d)
-                    output = get_spectra(Hs, shifts, d.qpts)
+                    output = get_spectra_(Hs, shifts, d.qpts)
                 else:
                     output = model(d)
                 run_time = time.time() - start_time
@@ -201,16 +198,17 @@ def plot_bands(df_in, header,
                formula=True, gtruth=True):
     """_summary_
 
-    Args:
-        df_in (pandas.core.frame.DataFrame): _description_
-        struct_data (pandas.core.frame.DataFrame): _description_
-        header (str): _description_
-        title (str, optional): _description_. Defaults to None.
-        n (int, optional): _description_. Defaults to 5.
-        m (int, optional): _description_. Defaults to 1.
-        lwidth (float, optional): _description_. Defaults to 0.5.
-        windowsize (tuple, optional): _description_. Defaults to (4, 1.8).
-        palette (list, optional): _description_. Defaults to palette.
+    Args: 
+        df_in (pandas.core.frame.DataFrame): Dataframe
+        header (str): header as the save dir and file name
+        title (str, optional): Figure title. Defaults to None.
+        n (int, optional): Number of bands to plot. Defaults to 5.
+        m (int, optional): Number of materials to plot. Defaults to 1.
+        lwidth (float, optional): Line width. Defaults to 0.5.
+        windowsize (tuple, optional): Figure size. Defaults to (3, 2).
+        palette (list, optional): Color palette. Defaults to palette.
+        formula (bool, optional): Whether to use formula name. Defaults to True.
+        gtruth (bool, optional): Whether to plot ground truth. Defaults to True.
     """
     fontsize = 10
     i_mse = np.argsort(df_in['loss'])
@@ -226,7 +224,6 @@ def plot_bands(df_in, header,
     fig0.savefig(f"{header}_{title}_dist.png")
     fig0.savefig(f"{header}_{title}_dist.pdf")
     # delete up to this line
-    
     fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
     gs = axs[0,0].get_gridspec()
     # remove the underlying axes
@@ -235,7 +232,6 @@ def plot_bands(df_in, header,
     # add long axis
     axl = fig.add_subplot(gs[:,0])
     axl, cols=loss_dist(axl, ds, num, palette, xtiles, fontsize)
-
     cols = np.repeat(cols, n*m)
     axs = axs[:,1:].ravel()
     id_list = []
@@ -271,6 +267,17 @@ def plot_bands(df_in, header,
     print(id_list)
 
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
+    """
+    Args:
+        df_in (pandas.core.frame.DataFrame): Dataframe
+        header (str): header as the save dir and file name
+        title (str, optional): Figure title. Defaults to None.
+        n (int, optional): Number of columns to plot. Defaults to 5.
+        m (int, optional): Number of rows to plot per each tertile. Defaults to 1.
+        lwidth (float, optional): Line width. Defaults to 0.5.
+        windowsize (tuple, optional): Figure size. Defaults to (4, 2).
+    
+    """
     # function to plot gamma phonons of the tertiles. 
     fontsize = 10
     i_mse = np.argsort(df_in['loss'])
@@ -332,7 +339,7 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
 
 
 def compare_corr(df1, df2, color1, color2, header, size=5, r2=False):
-    """_summary_
+    """ Plot the scatter plot of the predicted vs true values of the two models
 
     Args:
         df1 (pandas.core.frame.DataFrame): Dataframe1
@@ -378,7 +385,7 @@ def compare_corr(df1, df2, color1, color2, header, size=5, r2=False):
     fig.savefig(f"{header}scatter_compare.svg")
 
 def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), lw=3):
-    """_summary_
+    """ Compare the distribution of the loss of the two models
 
     Args:
         df1 (pandas.core.frame.DataFrame): Dataframe1
@@ -424,7 +431,7 @@ def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), 
 
 
 def get_element_statistics(data_set):
-    """_summary_
+    """get the element statistics of the dataset
 
     Args:
         data_set (torch.utils.data.dataset.Subset): tr_set or te_set
@@ -456,7 +463,7 @@ def get_element_statistics(data_set):
 
 def plot_element_count_stack(data_set1, data_set2, header=None, title=None, 
                              bar_colors=['#90BE6D', '#277DA1']):
-    """_summary_
+    """ Get the element statistics of the two datasets and plot the stacked bar chart
 
     Args:
         data_set1 (torch.utils.data.dataset.Subset): tr_set or te_set

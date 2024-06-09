@@ -6,7 +6,7 @@ import numpy as np
 import pickle as pkl
 from ase.neighborlist import neighbor_list
 from torch_geometric.data import Data
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset
 from ase import Atom
 import mendeleev as md
 import itertools
@@ -34,7 +34,7 @@ def pkl_load(filename):
         loaded_dict = pkl.load(file)
     return loaded_dict
 
-class CombinedDataset(Dataset):
+class CombinedDataset(Dataset): #TODO: remove
     def __init__(self, subsets):
         self.subsets = subsets
         self.total_length = sum(len(subset) for subset in subsets) 
@@ -87,34 +87,6 @@ def get_node_attr(atomic_numbers, n):
     z += temp * n
     return torch.from_numpy(np.array(z, dtype = np.float64))
 
-
-# def atom_feature(atomic_number: int, descriptor):
-#     """_summary_
-
-#     Args:
-#         atomic_number (_int_): atomic number 
-#         descriptor (_'str'_): descriptor type. select from ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
-
-#     Returns:
-#         _type_: descriptor
-#     """
-#     if descriptor=='mass':  # Atomic Mass (amu)
-#         feature = Atom(atomic_number).mass
-#     elif descriptor=='number':  # atomic number
-#         feature = atomic_number
-#     else:
-#         ele = md.element(atomic_number) # use mendeleev
-#         if descriptor=='radius':    # Atomic Radius (pm)
-#             feature = ele.atomic_radius
-#         elif descriptor=='en': # Electronegativity (Pauling)
-#             feature = ele.en_pauling
-#         elif descriptor=='ie':  # Ionization Energy (eV)
-#             feature = ele.ionenergies[1]
-#         elif descriptor=='dp':  # Dipole Polarizability (Å^3)
-#             feature = ele.dipole_polarizability
-#         else:   # no feature
-#             feature = 1
-#     return feature
 
 def atom_feature(atomic_number: int, descriptor):
     """_summary_
@@ -215,7 +187,7 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descripto
         data_dict  = pkl.load(open(data_dict_path, 'rb'))
     return data_dict
 
-#!
+
 def append_diag_vn(struct, element="Fe"):
     # diagonal virtual nodes
     # option for atom choices. 
@@ -307,7 +279,6 @@ def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe', descriptor=
                 numb = numb)
     
     return data
-
 
 def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26, descriptor='mass'):
     data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')

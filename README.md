@@ -2,7 +2,7 @@
 We present the virtual node graph neural network (VGNN) to address the challenges in phonon prediction. 
 
 <p align="center">
-  <img src="assets/illustrative.png" /> 
+  <img src="assets/vgnn.png" /> 
 </p>
 
 #### Work from a local installation

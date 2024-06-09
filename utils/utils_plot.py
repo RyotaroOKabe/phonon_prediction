@@ -14,6 +14,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sklearn
 import time
+from tqdm import tqdm
 palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
 datasets = ['train', 'valid', 'test']
 colors = dict(zip(datasets, palette[:-1]))
@@ -170,23 +171,27 @@ def get_spectra(Hs, shifts, qpts):
 def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
     with torch.no_grad():
         df = pd.DataFrame(columns=['id', 'name', 'loss', 'real_band', 'output_test', 'time', 'numb'])
-        for d in dataloader:
-            d.to(device)
-            if len(d.pos) > 60:
+        for d in tqdm(dataloader):
+            try: 
+                d.to(device)
+                # if len(d.pos) > 60:
+                #     continue
+                start_time = time.time()
+                if option in ['kmvn', 'mvn']:
+                    Hs, shifts = model(d)
+                    output = get_spectra(Hs, shifts, d.qpts)
+                else:
+                    output = model(d)
+                run_time = time.time() - start_time
+                loss = loss_fn(output, d.y).cpu()
+                real = d.y.cpu().numpy()*1000
+                pred = output.cpu().numpy()*1000
+                rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real_band': list(real), 'output_test': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
+                df0 = pd.DataFrame(data = rrr)
+                df = pd.concat([df, df0], ignore_index=True)
+            except Exception as e:
+                print(e, d.id)
                 continue
-            start_time = time.time()
-            if option in ['kmvn', 'mvn']:
-                Hs, shifts = model(d)
-                output = get_spectra(Hs, shifts, d.qpts)
-            else:
-                output = model(d)
-            run_time = time.time() - start_time
-            loss = loss_fn(output, d.y).cpu()
-            real = d.y.cpu().numpy()*1000
-            pred = output.cpu().numpy()*1000
-            rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real_band': list(real), 'output_test': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
-            df0 = pd.DataFrame(data = rrr)
-            df = pd.concat([df, df0], ignore_index=True)
     return df
 
 def plot_bands(df_in, header, 

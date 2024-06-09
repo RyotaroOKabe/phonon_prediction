@@ -20,6 +20,14 @@ class BandLoss(_Loss):
         return torch.sum(torch.pow(torch.abs(input - target)/torch.max(torch.abs(target)), 2)) \
                /torch.numel(target)
 
+class BandLoss_MAE_Norm(_Loss):
+    def __init__(self, size_average = None, reduce = None, reduction: str = 'mean') -> None:
+        super(BandLoss_MAE_Norm, self).__init__(size_average, reduce, reduction)
+
+    def forward(self, input, target):
+        return torch.sum(torch.abs(input - target)/torch.max(torch.abs(target))) \
+               /torch.numel(target)
+
 def tp_path_exists(irreps_in1, irreps_in2, ir_out):
     irreps_in1 = Irreps(irreps_in1).simplify()
     irreps_in2 = Irreps(irreps_in2).simplify()

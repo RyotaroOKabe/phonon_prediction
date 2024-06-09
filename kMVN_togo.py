@@ -25,7 +25,8 @@ sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
 target = ['H', 'Li', 'F']
-file_extra ='./data/kyoto/df_40_low.pkl'
+# file_extra ='./data/kyoto/df_40_low.pkl'
+file_extra ='./data/kyoto/df_40.pkl'
 model_name0 = "kmvn_230103-023724"
 print('target elements: ', target)
 print('file_extras: ', file_extra)
@@ -191,24 +192,24 @@ opt = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay = weight_decay
 scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 
 #%%
-train(model,
-      opt,
-      tr_set,
-      tr_nums,
-      te_set,
-      loss_fn,
-      run_name,
-      max_iter,
-      scheduler,
-      device,
-      batch_size,
-      k_fold,
-      option='kmvn')
+# train(model,
+#       opt,
+#       tr_set,
+#       tr_nums,
+#       te_set,
+#       loss_fn,
+#       run_name,
+#       max_iter,
+#       scheduler,
+#       device,
+#       batch_size,
+#       k_fold,
+#       option='kmvn')
 
 
 #%%
 # prediction
-# model_name0 = "kmvn_230103-023724"      # pre-trained model. Rename if you want to use the model you trained in the tabs above. 
+model_name0 = "kmvn_230103-023724"      # pre-trained model. Rename if you want to use the model you trained in the tabs above. 
 model_file0 = f'./models/{model_name0}.torch'
 model0.load_state_dict(torch.load(model_file0)['state'])
 model0 = model0.to(device)

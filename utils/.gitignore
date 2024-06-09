@@ -1,4 +1,5 @@
 # utils_load.py
+__pycache__
 utils_model_vvn.py
 utils_data_vvn.py
 archive/

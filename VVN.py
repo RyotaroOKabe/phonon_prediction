@@ -11,7 +11,7 @@ import os
 from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data
 from utils.utils_data import generate_gamma_data_dict
-from utils.utils_model import BandLoss, GraphNetworkVVN, train  #! update
+from utils.utils_model import BandLoss, GraphNetwork_VVN, train  #! update
 from utils.utils_plot import generate_dafaframe, plot_gphonons, plot_element_count_stack    #! update
 torch.set_default_dtype(torch.float64)
 if torch.cuda.is_available():
@@ -146,7 +146,7 @@ data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
 #%%
 
-model = GraphNetworkVVN(mul,
+model = GraphNetwork_VVN(mul,
                      irreps_out,
                      lmax,
                      nlayers,

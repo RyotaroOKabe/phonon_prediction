@@ -113,13 +113,6 @@ with open(f'./data/idx_{run_name}_te.txt', 'w') as f:
     for idx in idx_te: f.write(f"{idx}\n")
 
 #%%
-# activate this tab to load train/valid/test indices
-# run_name_idx = "221226-011042"
-# with open(f'./data/idx_{run_name_idx}_tr.txt', 'r') as f: idx_tr = [int(i.split('\n')[0]) for i in f.readlines()]
-# with open(f'./data/idx_{run_name_idx}_te.txt', 'r') as f: idx_te = [int(i.split('\n')[0]) for i in f.readlines()]
-
-
-#%%
 data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict)))
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
 
@@ -155,8 +148,6 @@ train(model,
       batch_size,
       k_fold,
       option='kmvn')
-
-
 
 
 # %%

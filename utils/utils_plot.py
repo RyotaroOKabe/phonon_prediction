@@ -40,7 +40,7 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            if option in ['kmvn', 'mvn']:   #!
+            if option in ['kmvn']:   #!
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
             else:   #!
@@ -174,7 +174,7 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
                 # if len(d.pos) > 60:
                 #     continue
                 start_time = time.time()
-                if option in ['kmvn', 'mvn']:
+                if option in ['kmvn']:
                     Hs, shifts = model(d)
                     output = get_spectra_(Hs, shifts, d.qpts)
                 else:
@@ -312,6 +312,7 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
         i = s[k]
         realg = ds.iloc[i]['real_band'].reshape(-1)
         predg = ds.iloc[i]['output_test'].reshape(-1)
+        # print(f'[{i}] realg, predg: ', realg.shape, predg.shape)
         for j in range(ds.iloc[i]['real_band'].shape[0]):
             ax.hlines(realg[j], 0.2, 1.2,color='k', linewidth=lwidth*0.6)
             ax.hlines(predg[j], 1.5, 2.5,color=cols[k], linewidth=lwidth)

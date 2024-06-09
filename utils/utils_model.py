@@ -185,16 +185,17 @@ class GraphHamiltonianConvolution(GraphConvolution):
 class GraphNetwork(torch.nn.Module):
     def __init__(self,
                  mul,
-                 irreps_out,
+                 irreps_out,    #? irreps_node
                  lmax,
                  nlayers,
                  number_of_basis,
                  radial_layers,
                  radial_neurons,
-                 node_dim,
-                 node_embed_dim,
+                 node_dim,  #!
+                 node_embed_dim,    #!
                  input_dim,
-                 input_embed_dim):
+                 input_embed_dim    #!
+                 ):
         super().__init__()
         
         self.mul = mul
@@ -273,7 +274,98 @@ def get_spectra(Hs, shifts, qpts):
     return torch.sort(torch.real(eigvals))[0]
 
 
-class GraphNetworkVVN(torch.nn.Module):
+class GraphNetwork_MVN(torch.nn.Module):
+    def __init__(self,
+                 mul,
+                 irreps_out,    #? irreps_node
+                 lmax,
+                 nlayers,
+                 number_of_basis,
+                 radial_layers,
+                 radial_neurons,
+                 node_dim,  #!
+                 node_embed_dim,    #!
+                 input_dim,
+                 input_embed_dim    #!
+                 ):
+        super().__init__()
+        
+        self.mul = mul
+        self.irreps_in = Irreps(str(input_embed_dim)+'x0e')
+        self.irreps_node_attr = Irreps(str(node_embed_dim)+'x0e')
+        self.irreps_edge_attr = Irreps.spherical_harmonics(lmax)
+        self.irreps_hidden = Irreps([(self.mul, (l, p)) for l in range(lmax + 1) for p in [-1, 1]])
+        self.irreps_out = Irreps(irreps_out)
+        self.number_of_basis = number_of_basis
+
+        act = {1: torch.nn.functional.silu,
+               -1: torch.tanh}
+        act_gates = {1: torch.sigmoid,
+                     -1: torch.tanh}
+
+        self.layers = torch.nn.ModuleList()
+        irreps_in = self.irreps_in
+        for _ in range(nlayers):
+            irreps_scalars = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l == 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            irreps_gated = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l > 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            ir = "0e" if tp_path_exists(irreps_in, self.irreps_edge_attr, "0e") else "0o"
+            irreps_gates = Irreps([(mul, ir) for mul, _ in irreps_gated])
+
+            gate = Gate(irreps_scalars, [act[ir.p] for _, ir in irreps_scalars],
+                        irreps_gates, [act_gates[ir.p] for _, ir in irreps_gates],
+                        irreps_gated)
+            conv = GraphConvolution(irreps_in,
+                                    self.irreps_node_attr,
+                                    self.irreps_edge_attr,
+                                    gate.irreps_in,
+                                    number_of_basis,
+                                    radial_layers,
+                                    radial_neurons)
+
+            irreps_in = gate.irreps_out
+
+            self.layers.append(CustomCompose(conv, gate))
+
+        self.layers.append(GraphHamiltonianConvolution(irreps_in,
+                                                        self.irreps_node_attr,
+                                                        self.irreps_edge_attr,
+                                                        self.irreps_out,
+                                                        number_of_basis,
+                                                        radial_layers,
+                                                        radial_neurons))
+        self.emx = torch.nn.Linear(input_dim, input_embed_dim, dtype = torch.float64)
+        self.emz = torch.nn.Linear(node_dim, node_embed_dim, dtype = torch.float64)
+
+    def forward(self, data):
+        edge_src = data['edge_index'][0]
+        edge_dst = data['edge_index'][1]
+        edge_vec = data['edge_vec']
+        edge_len = data['edge_len']
+        edge_length_embedded = soft_one_hot_linspace(edge_len, 0.0, data['r_max'].item(), self.number_of_basis, basis = 'gaussian', cutoff = False)
+        edge_sh = spherical_harmonics(self.irreps_edge_attr, edge_vec, True, normalization = 'component')
+        edge_attr = edge_sh
+        # m = data['m'] #?
+        m = 1
+        numb = data['numb']
+        x = torch.relu(self.emx(torch.relu(data['x'])))
+        z = torch.relu(self.emz(torch.relu(data['z'])))
+        node_deg = data['node_deg']
+        for layer in self.layers:
+            x = layer(x, z, node_deg, edge_src, edge_dst, edge_attr, edge_length_embedded, numb, m)
+        eigvals = torch.linalg.eigvals(x)
+        abx = torch.abs(eigvals)
+        try:
+            epsilon = torch.min(abx[abx > 0])/100
+        except:
+            epsilon = 1E-8
+        eigvals = torch.sqrt(eigvals + epsilon)
+        # order = torch.sort(torch.real(eigvals))[1]
+        # output = eigvals[order]
+        # sort the eigenvalues and get as output
+        output = torch.sort(torch.real(eigvals))[0]
+        return output
+
+class GraphNetwork_VVN(torch.nn.Module):
     def __init__(self,
                  mul,
                  irreps_out,
@@ -363,7 +455,7 @@ def evaluate(model, dataloader, loss_fn, device, option='kmvn'):
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            if option in ['kmvn', 'mvn']:
+            if option in ['kmvn']:
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
             else:
@@ -424,7 +516,7 @@ def train(model,
         for i, d in enumerate(tr_loader):
             start = time.time()
             d.to(device)
-            if option in ['kmvn', 'mvn']:
+            if option in ['kmvn']:
                 Hs, shifts = model(d)
                 output = get_spectra(Hs, shifts, d.qpts)
             else:

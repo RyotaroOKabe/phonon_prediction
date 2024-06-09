@@ -188,6 +188,59 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descripto
     return data_dict
 
 
+def create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len):
+    N = max(edge_src) + 1
+    return doub(edge_src), np.concatenate([edge_dst, N * (edge_dst + 1) + edge_src], axis = 0), doub(edge_shift), doub(edge_vec), doub(edge_len)
+
+
+def build_data_mvn(id, structure, qpts, gphonon, r_max, descriptor='mass'):
+    symbols = structure.symbols
+    positions = torch.from_numpy(structure.positions.copy())
+    numb = len(positions)
+    lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
+    edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
+    # edge_src, edge_dst, edge_shift, edge_vec, edge_len, ucs = create_virtual_nodes(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
+    edge_src, edge_dst, edge_shift, edge_vec, edge_len = create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
+    z = get_node_attr(structure.arrays['numbers'], 1)
+    x = get_input(structure.arrays['numbers'], 1, descriptor)
+    y = torch.from_numpy(gphonon/1000).unsqueeze(0)
+    node_deg = get_node_deg(edge_dst, len(x))
+    data = Data(id = id,
+                pos = positions,
+                lattice = lattice,
+                symbol = symbols,
+                z = z,
+                x = x,
+                y = y,
+                node_deg = node_deg,
+                edge_index = torch.stack([torch.LongTensor(edge_src), torch.LongTensor(edge_dst)], dim = 0),
+                edge_shift = torch.tensor(edge_shift, dtype = torch.float64),
+                edge_vec = torch.tensor(edge_vec, dtype = torch.float64),
+                edge_len = torch.tensor(edge_len, dtype = torch.float64),
+                qpts = torch.tensor(qpts, dtype = torch.float64),
+                gphonon = torch.from_numpy(gphonon).unsqueeze(0),
+                r_max = r_max,
+                numb = numb)
+    return data
+
+def generate_gamma_data_dict_mvn(data_dir, run_name, data, r_max, descriptor='mass'):
+    data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
+    if len(glob.glob(data_dict_path)) == 0: 
+        data_dict = dict()
+        ids = data['id']
+        structures = data['structure']
+        qptss = data['qpts']
+        band_structures = data['band_structure']
+        for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
+            # print(id)
+            gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
+            data_dict[id] = build_data_mvn(id, structure, qpts[gi], band_structure[gi], r_max, descriptor)
+        # pkl.dump(data_dict, open(data_dict_path, 'wb'))
+    else:
+        data_dict  = pkl.load(open(data_dict_path, 'rb'))
+    return data_dict
+
+
 def append_diag_vn(struct, element="Fe"):
     # diagonal virtual nodes
     # option for atom choices. 

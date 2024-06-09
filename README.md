@@ -1,6 +1,10 @@
 # Virtual Node Graph Neural Network for Full Phonon Prediction
 We present the virtual node graph neural network (VGNN) to address the challenges in phonon prediction. 
 
+<p align="center">
+  <img src="assets/illustrative.png" /> 
+</p>
+
 #### Work from a local installation
 To work from a local copy of the code:
 
@@ -17,9 +21,9 @@ To work from a local copy of the code:
 3. Install all necessary packages:
 	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html`
 
-	where `${TORCH}` and `${CUDA}` should be replaced by the specific CUDA version (e.g. `cpu`, `cu102`) and PyTorch version (e.g. `1.10.0`), respectively. For example:
+	where `${TORCH}` and `${CUDA}` should be replaced by the specific CUDA version (e.g. `cpu`, `cu118`) and PyTorch version (e.g. `2.0.0`), respectively. For example:
 
-	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-1.10.0+cu102.html`
+	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-2.0.0+cu118.html`
 
 4. Run `jupyter notebook` and open `VVN.ipynb` or `kMVN.ipynb`.
 

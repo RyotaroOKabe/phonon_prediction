@@ -4,7 +4,7 @@ slurm/
 archive/
 kMVN_alloy.ipynb
 *.pkl
-*.png
+None_element_count_None
 *.pdf
 # VVN.py
 # kMVN.py

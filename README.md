@@ -30,7 +30,7 @@ To work from a local copy of the code:
 ## Vector Virtual Nodes (VVN)
 Train the VVN for Gamma phonon prediction.    
 ```
-$ python VVN.py    
+$ python train_vvn.py    
 
 ```
 Run the code `VVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
@@ -38,7 +38,7 @@ Run the code `VVN.ipynb` for inferencing, by setting the pretrained model name a
 ## Matrix Virtual Nodes (MVN)
 Train the MVN for Gamma phonon prediction.    
 ```
-$ python MVN.py    
+$ python train_mvn.py    
 
 ```
 Run the code `MVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
@@ -47,7 +47,7 @@ Run the code `MVN.ipynb` for inferencing, by setting the pretrained model name a
 ## Momentum-dependent Matrix Virtual Nodes ($k$-MVN)
 Train the $k$-MVN for phonon band structure prediction.
 ```
-$ python kMVN.py    
+$ python train_kmvn.py    
 
 ```
 Run the code `kMVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.     

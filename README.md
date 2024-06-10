@@ -2,10 +2,10 @@
 We present the virtual node graph neural network (VGNN) to address the challenges in phonon prediction. 
 
 <p align="center">
-  <img src="assets/vgnn.png" /> 
+  <img src="assets/vgnn.png" width="500">
 </p>
 
-#### Work from a local installation
+## Work from a local installation
 To work from a local copy of the code:
 
 1. Clone the repository:
@@ -27,7 +27,33 @@ To work from a local copy of the code:
 
 4. Run `jupyter notebook` and open `VVN.ipynb` or `kMVN.ipynb`.
 
-### References
+## Vector Virtual Nodes (VVN)
+Train the VVN for Gamma phonon prediction.    
+```
+$ python VVN.py    
+
+```
+Run the code `VVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
+
+## Matrix Virtual Nodes (MVN)
+Train the MVN for Gamma phonon prediction.    
+```
+$ python MVN.py    
+
+```
+Run the code `MVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
+
+
+## Momentum-dependent Matrix Virtual Nodes ($k$-MVN)
+Train the $k$-MVN for phonon band structure prediction.
+```
+$ python kMVN.py    
+
+```
+Run the code `kMVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.     
+
+
+## References
 **Publication:** Zhantao Chen, Nina Andrejevic, Tess Smidt, *et al.* "Virtual Node Graph Neural Network for Full Phonon
 Prediction." Journal. (2023): XXXX. "URL".
 

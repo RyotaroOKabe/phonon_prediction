@@ -1,4 +1,9 @@
 #%%
+##########################
+
+# Import
+
+##########################
 import torch
 import time
 import pickle as pkl
@@ -14,16 +19,16 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 seed=None #42
-import numpy as np
-import matplotlib.pyplot as plt
-from torch_geometric.loader import DataLoader
-import pandas as pd
-import matplotlib as mpl
-from ase.visualize.plot import plot_atoms
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
+##########################
+
+# Parameters 
+
+##########################
+
 file_name = os.path.basename(__file__)
 print("File Name:", file_name)
 run_name = time.strftime('%y%m%d-%H%M%S', time.localtime())
@@ -46,6 +51,12 @@ print('training ratio: ', tr_ratio)
 print('batch size: ', batch_size)
 
 #%%
+##########################
+
+# Parameters (continue)
+
+##########################
+
 max_iter = 200 #200
 lmax = 2 #2
 mul = 4 #4
@@ -91,6 +102,12 @@ print('learning rate scheduler: exponentialLR')
 print('schedule factor: ', schedule_gamma)
 
 #%%
+##########################
+
+# Load data from pkl or csv
+
+##########################
+
 download_data = True
 if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
@@ -118,6 +135,12 @@ data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
 
 #%%
+##########################
+
+# Set up the GNN model
+
+##########################
+
 model = GraphNetwork_MVN(mul,
                      irreps_out,
                      lmax,
@@ -136,6 +159,12 @@ opt = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay = weight_decay
 scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 
 #%%
+##########################
+
+# Train the GNN model
+
+##########################
+
 train(model,
       opt,
       tr_set,

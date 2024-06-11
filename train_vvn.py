@@ -19,12 +19,6 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 seed=None #42
-import numpy as np
-import matplotlib.pyplot as plt
-from torch_geometric.loader import DataLoader
-import pandas as pd
-import matplotlib as mpl
-from ase.visualize.plot import plot_atoms
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
@@ -33,7 +27,7 @@ import random
 #%%
 ##########################
 
-# Parameters (ToDo: move some parameters to the section of GNN model set up)
+# Parameters 
 
 ##########################
 
@@ -59,7 +53,7 @@ print('batch size: ', batch_size)
 #%%
 ##########################
 
-# Parameters (ToDo: move some parameters to the section of GNN model set up)
+# Parameters (continue)
 
 ##########################
 
@@ -111,12 +105,9 @@ print('learning rate scheduler: exponentialLR')
 print('schedule factor: ', schedule_gamma)
 
 #%%
-# load data
-
 ##########################
 
 # Load data from pkl or csv
-# (DFPT, Kyoto)
 
 ##########################
 os.system(f'rm -r {data_dir}/9850858*')
@@ -138,13 +129,14 @@ with open(f'./data/idx_{run_name}_tr.txt', 'w') as f:
 with open(f'./data/idx_{run_name}_te.txt', 'w') as f: 
     for idx in idx_te: f.write(f"{idx}\n")
 #%%
-# activate this tab to load train/valid/test indices
-# run_name_idx = "221226-011042"
-# with open(f'./data/idx_{run_name_idx}_tr.txt', 'r') as f: idx_tr = [int(i.split('\n')[0]) for i in f.readlines()]
-# with open(f'./data/idx_{run_name_idx}_te.txt', 'r') as f: idx_te = [int(i.split('\n')[0]) for i in f.readlines()]
 data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict)))
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
 #%%
+##########################
+
+# Set up the GNN model
+
+##########################
 
 model = GraphNetwork_VVN(mul,
                      irreps_out,
@@ -156,13 +148,19 @@ model = GraphNetwork_VVN(mul,
                      node_dim,
                      node_embed_dim,
                      input_dim,
-                     input_embed_dim)   #TODO: update the GraphNetwork (or create model with the other name) based on VVN principle. 
+                     input_embed_dim)
 print(model)
 #%%
 opt = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay = weight_decay)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 
 #%%
+##########################
+
+# Train the GNN model
+
+##########################
+
 train(model, 
       opt,
       tr_set,
@@ -175,7 +173,7 @@ train(model,
       device,
       batch_size,
       k_fold,
-      option=option)     #TODO: update the "train" (or create function with the other name) based on VVN principle. 
+      option=option)
 
 
 #%%

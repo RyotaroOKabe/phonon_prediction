@@ -1,4 +1,9 @@
 #%%
+##########################
+
+# Import
+
+##########################
 import torch
 import time
 import pickle as pkl
@@ -14,16 +19,16 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 seed=None #42
-import numpy as np
-import matplotlib.pyplot as plt
-from torch_geometric.loader import DataLoader
-import pandas as pd
-import matplotlib as mpl
-from ase.visualize.plot import plot_atoms
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
+##########################
+
+# Parameters 
+
+##########################
+
 file_name = os.path.basename(__file__)
 print("File Name:", file_name)
 run_name = time.strftime('%y%m%d-%H%M%S', time.localtime())
@@ -46,6 +51,12 @@ print('training ratio: ', tr_ratio)
 print('batch size: ', batch_size)
 
 #%%
+##########################
+
+# Parameters (continue)
+
+##########################
+
 max_iter = 200 #200
 lmax = 2 #2
 mul = 4 #4
@@ -59,6 +70,7 @@ node_embed_dim = 32 #32
 input_dim = 118
 input_embed_dim = 32 #32
 irreps_out = '2x0e+2x1e+2x2e'
+option = 'kmvn'
 
 print('\nmodel parameters')
 print('max iteration: ', max_iter)
@@ -74,6 +86,7 @@ print('node attribute embedding dimension: ', node_embed_dim)
 print('input dimension: ', input_dim)
 print('input embedding dimension: ', input_embed_dim)
 print('irreduceble output representation: ', irreps_out)
+print('Model option: ', option)
 
 #%%
 loss_fn = BandLoss()
@@ -90,6 +103,12 @@ print('learning rate scheduler: exponentialLR')
 print('schedule factor: ', schedule_gamma)
 
 #%%
+##########################
+
+# Load data from pkl or csv
+
+##########################
+
 download_data = True
 if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
@@ -117,6 +136,12 @@ data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
 
 #%%
+##########################
+
+# Set up the GNN model
+
+##########################
+
 model = GraphNetwork(mul,
                      irreps_out,
                      lmax,
@@ -135,6 +160,12 @@ opt = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay = weight_decay
 scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 
 #%%
+##########################
+
+# Train the GNN model
+
+##########################
+
 train(model,
       opt,
       tr_set,
@@ -147,7 +178,7 @@ train(model,
       device,
       batch_size,
       k_fold,
-      option='kmvn')
+      option=option)
 
 
 # %%

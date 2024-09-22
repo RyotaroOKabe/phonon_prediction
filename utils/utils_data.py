@@ -8,7 +8,8 @@ from torch_geometric.data import Data
 from ase import Atom
 import mendeleev as md
 import itertools
-from copy import copy
+from tqdm import tqdm
+# from copy import copy
 
 default_dtype = torch.float64
 torch.set_default_dtype(default_dtype)
@@ -42,6 +43,14 @@ def pkl_load(filename):
     with open(filename, 'rb') as file:
         loaded_dict = pkl.load(file)
     return loaded_dict
+
+def get_lattice_parameters(data):
+    a = []
+    len_data = len(data)
+    for i in range(len_data):
+        d = data.iloc[i]
+        a.append(d.structure.cell.cellpar()[:3])
+    return np.stack(a)
 
 def doub(array):
     """
@@ -288,7 +297,7 @@ def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='km
     data = Data(**data_dict)
     return data
 
-def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, **kwargs):
+def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, **kwargs):
     """
     Generate a dictionary of band structure data.
     Args:
@@ -307,10 +316,14 @@ def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descripto
         data_dict = dict()
         ids = data['id']
         structures = data['structure']
-        qptss = data['qpts'] if data['qpts'] is not None else np.zeros((len(ids), 3))
-        reals = data['real']  # data['band_structure']
-        for id, structure, real, qpts in zip(ids, structures, reals, qptss):
+        qptss = data['qpts']
+        reals = data['real_band']  # data['band_structure']
+        for id, structure, real, qpts in tqdm(zip(ids, structures, reals, qptss), total = len(ids)):
             # print(id)
+            if option in ['vvn', 'mvn']:
+                gamma_idx = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
+                real = real[gamma_idx]
+                qpts = qpts[gamma_idx]
             data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, **kwargs)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:

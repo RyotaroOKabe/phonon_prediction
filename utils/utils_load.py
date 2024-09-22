@@ -23,7 +23,7 @@ def load_band_structure_data(data_dir, raw_dir, data_file):
             Data['id'] = data['metadata']['material_id']
             Data['structure'] = [atoms]
             Data['qpts'] = [np.array(data['phonon']['qpts'])]
-            Data['band_structure'] = [np.array(data['phonon']['ph_bandstructure'])]
+            Data['real_band'] = [np.array(data['phonon']['ph_bandstructure'])]
             dfn = pd.DataFrame(data = Data)
             df = pd.concat([df, dfn], ignore_index = True)
         df.to_pickle(data_path)

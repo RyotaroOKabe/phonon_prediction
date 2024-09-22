@@ -10,7 +10,7 @@ import pickle as pkl
 import os
 from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data   #, load_data
-from utils.utils_data import generate_band_structure_data_dict
+from utils.utils_data import generate_data_dict
 from utils.utils_model import BandLoss, GraphNetwork, train
 from utils.utils_plot import generate_dafaframe, plot_bands, plot_element_count_stack
 from utils.helpers import make_dict
@@ -55,6 +55,8 @@ input_dim = 118
 input_embed_dim = 32 
 irreps_out = '2x0e+2x1e+2x2e'
 option = 'kmvn'
+descriptor = 'mass'
+factor = 1000
 
 loss_fn = BandLoss()
 lr = 0.005
@@ -85,8 +87,8 @@ if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
 
 #%%
-data = load_band_structure_data(data_dir, raw_dir, data_file)   #TODO: use 'option' inside or outside the function to select the data
-data_dict = generate_band_structure_data_dict(data_dir, run_name, data, r_max)
+data = load_band_structure_data(data_dir, raw_dir, data_file)
+data_dict = generate_data_dict(data_dir, run_name, data, r_max, descriptor=descriptor, option=option, factor=factor)
 
 #%%
 num = len(data_dict)

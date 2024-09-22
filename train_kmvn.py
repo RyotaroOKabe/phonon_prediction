@@ -85,7 +85,7 @@ if download_data:
     os.system(f'rm -r {data_dir}/9850858*')
 
 #%%
-data = load_band_structure_data(data_dir, raw_dir, data_file)
+data = load_band_structure_data(data_dir, raw_dir, data_file)   #TODO: use 'option' inside or outside the function to select the data
 data_dict = generate_band_structure_data_dict(data_dir, run_name, data, r_max)
 
 #%%
@@ -109,7 +109,7 @@ tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Sub
 
 ##########################
 
-model = GraphNetwork(mul,
+model = GraphNetwork(mul,   #TODO: use 'option' inside or outside the function to select the data
                      irreps_out,
                      lmax,
                      nlayers,

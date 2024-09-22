@@ -1,12 +1,10 @@
 import torch
 import glob
 import os
-import pandas as pd
 import numpy as np
 import pickle as pkl
 from ase.neighborlist import neighbor_list
 from torch_geometric.data import Data
-from torch.utils.data import Dataset
 from ase import Atom
 import mendeleev as md
 import itertools
@@ -16,6 +14,10 @@ default_dtype = torch.float64
 torch.set_default_dtype(default_dtype)
 
 class MD():
+    """
+    Class to store atomic properties like radius, electronegativity, ionization energy, and dipole polarizability.
+    These properties are retrieved from the mendeleev library for all elements.
+    """
     def __init__(self):
         self.radius, self.pauling, self.ie, self.dip = {}, {}, {}, {}
         for atomic_number in range(1, 119):
@@ -30,35 +32,31 @@ class MD():
 md_class = MD()
 
 def pkl_load(filename):
+    """
+    Load a pickle file.
+    Args:
+        filename (str): Path to the pickle file.
+    Returns:
+        object: The loaded object from the pickle file.
+    """
     with open(filename, 'rb') as file:
         loaded_dict = pkl.load(file)
     return loaded_dict
 
-class CombinedDataset(Dataset): #TODO: remove
-    def __init__(self, subsets):
-        self.subsets = subsets
-        self.total_length = sum(len(subset) for subset in subsets) 
-    def __len__(self):
-        return self.total_length
-    def __getitem__(self, idx):
-        # Find the appropriate subset for the given index
-        for subset in self.subsets:
-            if idx < len(subset):
-                return subset[idx]
-            idx -= len(subset)    
-        raise IndexError("Index out of range")
-
 def doub(array):
+    """
+    Concatenate an array with itself along axis 0.
+    Args:
+        array (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Concatenated array.
+    """
     return np.concatenate([array]*2, axis = 0)
 
-def create_virtual_nodes(edge_src, edge_dst, edge_shift, edge_vec, edge_len):
-    N = max(edge_src) + 1
-    shift_lengths = np.max(edge_shift, axis = 0) - np.min(edge_shift, axis = 0) + 1
-    ucs = UnitCellShift(shift_lengths)
-    shift_dst = ucs.shift_indices[tuple(np.array(edge_shift).T.tolist())]
-    return doub(edge_src), np.concatenate([edge_dst, N * (edge_dst + 1) + edge_src + N ** 2 * shift_dst], axis = 0), doub(edge_shift), doub(edge_vec), doub(edge_len), ucs
-
 class UnitCellShift():
+    """
+    Class to handle unit cell shifts based on provided shift lengths.
+    """
     def __init__(self, shift_lengths):
         self.shift_lengths = shift_lengths
         self.shift_arrays = [np.array(list(range(length))[int((length-1)/2):]+list(range(length))[:int((length-1)/2)]) - int((length-1)/2) for length in shift_lengths]
@@ -66,37 +64,67 @@ class UnitCellShift():
         self.shift_reverse = np.meshgrid(*self.shift_arrays, indexing='ij')
         self.shift_reverse = np.concatenate([shift.reshape((-1, 1)) for shift in self.shift_reverse], axis = 1)
 
+
+def create_virtual_nodes_kmvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len):
+    """
+    Create virtual nodes for the 'kmvn' method.
+    Args:
+        edge_src (np.ndarray): Source edge indices.
+        edge_dst (np.ndarray): Destination edge indices.
+        edge_shift (np.ndarray): Edge shifts.
+        edge_vec (np.ndarray): Edge vectors.
+        edge_len (np.ndarray): Edge lengths.
+    Returns:
+        tuple: Updated edges, shifts, vectors, lengths, and unit cell shifts.
+    """
+    N = max(edge_src) + 1
+    shift_lengths = np.max(edge_shift, axis = 0) - np.min(edge_shift, axis = 0) + 1
+    ucs = UnitCellShift(shift_lengths)
+    shift_dst = ucs.shift_indices[tuple(np.array(edge_shift).T.tolist())]
+    return doub(edge_src), np.concatenate([edge_dst, N * (edge_dst + 1) + edge_src + N ** 2 * shift_dst], axis = 0), doub(edge_shift), doub(edge_vec), doub(edge_len), ucs
+
+def create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len):
+    """
+    Create virtual nodes for the 'mvn' method.
+    Args:
+        edge_src (np.ndarray): Source edge indices.
+        edge_dst (np.ndarray): Destination edge indices.
+        edge_shift (np.ndarray): Edge shifts.
+        edge_vec (np.ndarray): Edge vectors.
+        edge_len (np.ndarray): Edge lengths.
+    Returns:
+        tuple: Updated edges, shifts, vectors, lengths.
+    """
+    N = max(edge_src) + 1
+    return doub(edge_src), np.concatenate([edge_dst, N * (edge_dst + 1) + edge_src], axis = 0), doub(edge_shift), doub(edge_vec), doub(edge_len)
+
 def get_node_deg(edge_dst, n):
+    """
+    Compute node degrees from the destination edges.
+    Args:
+        edge_dst (np.ndarray): Destination edges.
+        n (int): Number of nodes.
+    Returns:
+        torch.Tensor: Node degrees.
+    """
     node_deg = np.zeros((n, 1), dtype = np.float64)
     for dst in edge_dst:
         node_deg[dst] += 1
     node_deg += node_deg == 0
     return torch.from_numpy(node_deg)
 
-def get_node_attr(atomic_numbers, n):
-    z = []
-    for atomic_number in atomic_numbers:
-        atomic = [0.0] * 118
-        atomic[atomic_number - 1] = 1
-        z.append(atomic)
-    temp = []
-    for atomic_number in atomic_numbers:
-        atomic = [0.0] * 118
-        atomic[atomic_number - 1] = 1
-        temp += [atomic] * len(atomic_numbers)
-    z += temp * n
-    return torch.from_numpy(np.array(z, dtype = np.float64))
+
+# def get_node_attr(atomic_numbers, n): #TODO: delete later
 
 
 def atom_feature(atomic_number: int, descriptor):
-    """_summary_
-
+    """
+    Get atomic features based on the descriptor.
     Args:
-        atomic_number (_int_): atomic number 
-        descriptor (_'str'_): descriptor type. select from ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
-
+        atomic_number (int): Atomic number of the element.
+        descriptor (str): Type of descriptor. Can be 'mass', 'number', 'radius', 'en', 'ie', 'dp', 'non'.
     Returns:
-        _type_: descriptor
+        float: The atomic feature value.
     """
     if descriptor=='mass':  # Atomic Mass (amu)
         feature = Atom(atomic_number).mass
@@ -116,236 +144,174 @@ def atom_feature(atomic_number: int, descriptor):
             feature = 1
     return feature
 
-def get_input(atomic_numbers, n, descriptor='mass'):
+
+# def get_input(atomic_numbers, n, descriptor='mass'):  #TODO delete later
+
+
+def create_node_input(atomic_numbers, n=None, descriptor='mass', option='kmvn'):
     """
-
+    Create node input features for a list of atomic numbers.
     Args:
-        atomic_numbers (_type_): _description_
-        n (_type_): _description_
-        descriptor (str, optional): descriptor for initial node features. Defaults to 'mass'. 
-                ['mass', 'number', 'radius', 'en', 'ie', 'dp', 'non']
-
+        atomic_numbers (list): List of atomic numbers.
+        n (int, optional): Scaling factor for repetition. Defaults to None.
+        descriptor (str, optional): Descriptor for the node features. Defaults to 'mass'.
+        option (str, optional): Option for repeating vectors. Defaults to 'kmvn'.
     Returns:
-        _type_: _description_
+        torch.Tensor: Tensor of node input features.
     """
     x = []
+    temp = []
     for atomic_number in atomic_numbers:
         atomic = [0.0] * 118         
         atomic[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
         x.append(atomic)
-    temp = []
-    for atomic_number in atomic_numbers:
-        atomic = [0.0] * 118
-        atomic[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
-        temp += [atomic] * len(atomic_numbers)
-    x += temp * n
+        if option in ['kmvn', 'mvn']:
+            temp += [atomic] * len(atomic_numbers)
+    if n is not None:
+        x += temp * n
     return torch.from_numpy(np.array(x, dtype = np.float64))
 
-def build_data(id, structure, qpts, band_structure, r_max, descriptor='mass'):
-    symbols = structure.symbols
-    positions = torch.from_numpy(structure.positions.copy())
-    numb = len(positions)
-    lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len, ucs = create_virtual_nodes(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
-    z = get_node_attr(structure.arrays['numbers'], len(ucs.shift_reverse))
-    x = get_input(structure.arrays['numbers'], len(ucs.shift_reverse), descriptor)
-    node_deg = get_node_deg(edge_dst, len(x))
-    y = torch.from_numpy(band_structure/1000).unsqueeze(0)
-    data = Data(id = id,
-                pos = positions,
-                lattice = lattice,
-                symbol = symbols,
-                z = z,
-                x = x,
-                y = y,
-                node_deg = node_deg,
-                edge_index = torch.stack([torch.LongTensor(edge_src), torch.LongTensor(edge_dst)], dim = 0),
-                edge_shift = torch.tensor(edge_shift, dtype = torch.float64),
-                edge_vec = torch.tensor(edge_vec, dtype = torch.float64),
-                edge_len = torch.tensor(edge_len, dtype = torch.float64),
-                qpts = torch.tensor(qpts, dtype = torch.float64),
-                band_structure = torch.from_numpy(band_structure).unsqueeze(0),
-                r_max = r_max,
-                ucs = ucs,
-                numb = numb)
-    return data
 
-def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descriptor='mass'):
-    data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
-    if len(glob.glob(data_dict_path)) == 0: 
-        data_dict = dict()
-        ids = data['id']
-        structures = data['structure']
-        qptss = data['qpts']
-        band_structures = data['band_structure']
-        for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
-            # print(id)
-            data_dict[id] = build_data(id, structure, qpts, band_structure, r_max, descriptor)
-        # pkl.dump(data_dict, open(data_dict_path, 'wb'))
-    else:
-        data_dict  = pkl.load(open(data_dict_path, 'rb'))
-    return data_dict
-
-
-def create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len):
-    N = max(edge_src) + 1
-    return doub(edge_src), np.concatenate([edge_dst, N * (edge_dst + 1) + edge_src], axis = 0), doub(edge_shift), doub(edge_vec), doub(edge_len)
-
-
-def build_data_mvn(id, structure, qpts, gphonon, r_max, descriptor='mass'):
-    symbols = structure.symbols
-    positions = torch.from_numpy(structure.positions.copy())
-    numb = len(positions)
-    lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
-    # edge_src, edge_dst, edge_shift, edge_vec, edge_len, ucs = create_virtual_nodes(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len = create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
-    z = get_node_attr(structure.arrays['numbers'], 1)
-    x = get_input(structure.arrays['numbers'], 1, descriptor)
-    y = torch.from_numpy(gphonon/1000).unsqueeze(0)
-    node_deg = get_node_deg(edge_dst, len(x))
-    data = Data(id = id,
-                pos = positions,
-                lattice = lattice,
-                symbol = symbols,
-                z = z,
-                x = x,
-                y = y,
-                node_deg = node_deg,
-                edge_index = torch.stack([torch.LongTensor(edge_src), torch.LongTensor(edge_dst)], dim = 0),
-                edge_shift = torch.tensor(edge_shift, dtype = torch.float64),
-                edge_vec = torch.tensor(edge_vec, dtype = torch.float64),
-                edge_len = torch.tensor(edge_len, dtype = torch.float64),
-                qpts = torch.tensor(qpts, dtype = torch.float64),
-                gphonon = torch.from_numpy(gphonon).unsqueeze(0),
-                r_max = r_max,
-                numb = numb)
-    return data
-
-def generate_gamma_data_dict_mvn(data_dir, run_name, data, r_max, descriptor='mass'):
-    data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
-    if len(glob.glob(data_dict_path)) == 0: 
-        data_dict = dict()
-        ids = data['id']
-        structures = data['structure']
-        qptss = data['qpts']
-        band_structures = data['band_structure']
-        for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
-            # print(id)
-            gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
-            data_dict[id] = build_data_mvn(id, structure, qpts[gi], band_structure[gi], r_max, descriptor)
-        # pkl.dump(data_dict, open(data_dict_path, 'wb'))
-    else:
-        data_dict  = pkl.load(open(data_dict_path, 'rb'))
-    return data_dict
-
-
-def append_diag_vn(struct, element="Fe"):
-    # diagonal virtual nodes
-    # option for atom choices. 
-    """_summary_
-    Args:
-        struct (ase.atoms.Atoms): original ase.atoms.Atoms object
-    Returns:
-        ase.atoms.Atoms: Atoms affter appending additonal nodes
+def append_diag_vvn(structure, element="Fe"):
     """
-    cell = struct.get_cell()
-    num_sites = struct.get_positions().shape[0]
-    total_len = 3*num_sites
-    struct2 = struct.copy()
-    for i in range(total_len):
-        vec = i*(cell[0]  + cell[1] + cell[2])/total_len
-        struct2.append(Atom(element, (vec[0], vec[1], vec[2])))
-    return struct2
+    Append diagonal virtual nodes to the structure.
+    Args:
+        structure (ase.atoms.Atoms): Original atomic structure.
+        element (str, optional): Element type for virtual nodes. Defaults to "Fe".
+    Returns:
+        ase.atoms.Atoms: Structure with added virtual nodes.
+    """
+    cell = structure.get_cell()
+    num_sites = structure.get_positions().shape[0]
+    total_len_vvn = 3*num_sites
+    structure_vvn = structure.copy()
+    for i in range(total_len_vvn):
+        vec = i*(cell[0]  + cell[1] + cell[2])/total_len_vvn
+        structure_vvn.append(Atom(element, (vec[0], vec[1], vec[2])))
+    return structure_vvn
 
-def create_virtual_nodes_vvn(structure0, vnelem, edge_src0, edge_dst0, edge_shift0):
-    structure = append_diag_vn(structure0, element=vnelem)
+def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem='Fe'):
+    """
+    Create virtual nodes for the 'vvn' method.
+    Args:
+        structure (ase.atoms.Atoms): Original atomic structure.
+        edge_src (np.ndarray): Source edges.
+        edge_dst (np.ndarray): Destination edges.
+        edge_shift (np.ndarray): Edge shifts.
+        vnelem (str, optional): Element type for virtual nodes. Defaults to 'Fe'.
+    Returns:
+        tuple: Updated edges, shifts, vectors, lengths, and virtual node structure.
+    """
+    structure_vvn = append_diag_vvn(structure, element=vnelem)
+    positions_vvn = torch.from_numpy(structure_vvn.get_positions().copy())
     positions = torch.from_numpy(structure.get_positions().copy())
-    positions0 = torch.from_numpy(structure0.get_positions().copy())
-    numb = len(positions0)
-    lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
+    numb = len(positions)
+    lattice_vvn = torch.from_numpy(structure_vvn.cell.array.copy()).unsqueeze(0)
     idx_real, idx_virt = range(numb), range(numb, 4*numb)
     rv_pairs = list(itertools.product(idx_real, idx_virt))
     vv_pairs = list(itertools.product(idx_virt, idx_virt))
-    edge_src = copy(edge_src0)
-    edge_dst = copy(edge_dst0)
-    edge_shift = copy(edge_shift0)
-    for i in range(len(rv_pairs)):
-        edge_src = np.append(edge_src, np.array([rv_pairs[i][0]]))
-        edge_dst = np.append(edge_dst, np.array([rv_pairs[i][1]]))
-        edge_shift = np.concatenate((edge_shift, np.array([[0, 0, 0]])), axis=0)
-    for j in range(len(vv_pairs)):
-        edge_src = np.append(edge_src, np.array([vv_pairs[j][0]]))
-        edge_dst = np.append(edge_dst, np.array([vv_pairs[j][1]]))
-        edge_shift = np.concatenate((edge_shift, np.array([[0, 0, 0]])), axis=0)
-    edge_batch = positions.new_zeros(positions.shape[0], dtype=torch.long)[torch.from_numpy(edge_src)]
-    edge_vec = (positions[torch.from_numpy(edge_dst)]
-                - positions[torch.from_numpy(edge_src)]
-                + torch.einsum('ni,nij->nj', torch.tensor(edge_shift, dtype=default_dtype), lattice[edge_batch]))
-    edge_len = np.around(edge_vec.norm(dim=1).numpy(), decimals=2)
-    return edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure
+    # edge_src_vvn = copy(edge_src)
+    # edge_dst_vvn = copy(edge_dst)
+    # edge_shift_vvn = copy(edge_shift)
+    
+    edge_src_vvn = np.append(edge_src, [pair[0] for pair in rv_pairs + vv_pairs])
+    edge_dst_vvn = np.append(edge_dst, [pair[1] for pair in rv_pairs + vv_pairs])
+    edge_shift_vvn = np.concatenate([edge_shift, np.zeros((len(rv_pairs) + len(vv_pairs), 3))])
+    
+    # for i in range(len(rv_pairs)):
+    #     edge_src_vvn = np.append(edge_src_vvn, np.array([rv_pairs[i][0]]))
+    #     edge_dst_vvn = np.append(edge_dst_vvn, np.array([rv_pairs[i][1]]))
+    #     edge_shift_vvn = np.concatenate((edge_shift_vvn, np.array([[0, 0, 0]])), axis=0)
+    # for j in range(len(vv_pairs)):
+    #     edge_src_vvn = np.append(edge_src_vvn, np.array([vv_pairs[j][0]]))
+    #     edge_dst_vvn = np.append(edge_dst_vvn, np.array([vv_pairs[j][1]]))
+    #     edge_shift_vvn = np.concatenate((edge_shift_vvn, np.array([[0, 0, 0]])), axis=0)
+    
+    # edge_batch = positions_vvn.new_zeros(positions_vvn.shape[0], dtype=torch.long)[torch.from_numpy(edge_src_vvn)]   #TODO: check the code line
+    # edge_vec_vvn = (positions_vvn[torch.from_numpy(edge_dst_vvn)]
+    #             - positions_vvn[torch.from_numpy(edge_src_vvn)]
+    #             + torch.einsum('ni,nij->nj', torch.tensor(edge_shift_vvn, dtype=default_dtype), lattice_vvn[edge_batch]))   #TODO: check the code line
+    edge_vec_vvn = (positions_vvn[torch.from_numpy(edge_dst_vvn)]
+                    - positions_vvn[torch.from_numpy(edge_src_vvn)]
+                    + torch.einsum('ni,nij->nj', torch.tensor(edge_shift_vvn, dtype=default_dtype), lattice_vvn))
+    edge_len_vvn = np.around(edge_vec_vvn.norm(dim=1).numpy(), decimals=2)
+    return edge_src_vvn, edge_dst_vvn, edge_shift_vvn, edge_vec_vvn, edge_len_vvn, structure_vvn
 
-def get_node_attr_vvn(atomic_numbers):
-    z = []
-    for atomic_number in atomic_numbers:
-        node_attr = [0.0] * 118
-        node_attr[atomic_number - 1] = 1
-        z.append(node_attr)
-    return torch.from_numpy(np.array(z, dtype = np.float64))
+# def get_node_attr_vvn(atomic_numbers):    #TODO: delete later
+# def get_node_feature_vvn(atomic_numbers, descriptor='mass'):  #TODO: delete later
 
-def get_node_feature_vvn(atomic_numbers, descriptor='mass'):
-    x = []
-    for atomic_number in atomic_numbers:
-        node_feature = [0.0] * 118
-        node_feature[atomic_number - 1] = atom_feature(int(atomic_number), descriptor)
-        x.append(node_feature)
-    return torch.from_numpy(np.array(x, dtype = np.float64))
 
-def build_data_vvn(id, structure, qpts, gphonon, r_max, vnelem='Fe', descriptor='mass'):
-    symbols = list(structure.symbols).copy()
-    positions = torch.from_numpy(structure.get_positions().copy())
+def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='kmvn', factor=1000, **kwargs):
+    """
+    Build data object for graph-based learning models.
+    Args:
+        mpid (str): Material project ID.
+        structure (ase.atoms.Atoms): Atomic structure.
+        real (np.ndarray): Real values (e.g., band structure).
+        r_max (float): Cutoff radius for neighbor list.
+        qpts (np.ndarray): q-points.
+        descriptor (str, optional): Descriptor for node features. Defaults to 'mass'.
+        option (str, optional): Option for virtual node creation. Defaults to 'kmvn'.
+        factor (int, optional): Scaling factor for real values. Defaults to 1000.
+    Returns:
+        torch_geometric.data.Data: Data object for PyTorch Geometric.
+    """
+    symbols = structure.symbols
+    positions = torch.from_numpy(structure.positions.copy())
     numb = len(positions)
     lattice = torch.from_numpy(structure.cell.array.copy()).unsqueeze(0)
-    _edge_src, _edge_dst, _edge_shift, _, _ = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
-    edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, vnelem, _edge_src, _edge_dst, _edge_shift)
-    z = get_node_attr_vvn(structure_vn.arrays['numbers'])
-    x =  get_node_feature_vvn(structure_vn.arrays['numbers'], descriptor)
+    edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
+    ucs = None
+    if option == 'vvn':
+        vnelem = kwargs['vnelem']   #TODO: check if this line is correct. 
+        edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem)
+        len_usc = None
+    else: 
+        if option == 'kmvn':
+            edge_src, edge_dst, edge_shift, edge_vec, edge_len, ucs = create_virtual_nodes_kmvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
+            len_usc = len(ucs.shift_reverse)
+        elif option == 'mvn':
+            edge_src, edge_dst, edge_shift, edge_vec, edge_len = create_virtual_node_mvn(edge_src, edge_dst, edge_shift, edge_vec, edge_len)
+            len_usc = 1
+
+    z = create_node_input(structure.arrays['numbers'], len_usc, descriptor='one_hot', option=option)   # node attribute
+    x = create_node_input(structure.arrays['numbers'], len_usc, descriptor=descriptor, option=option)  # init node feature
+    y = torch.from_numpy(real/factor).unsqueeze(0)
     node_deg = get_node_deg(edge_dst, len(x))
-    y = torch.from_numpy(gphonon/1000).unsqueeze(0)
-    data = Data(id = id,
-                pos = positions,
-                lattice = lattice,
-                symbol = symbols,
-                x = x,
-                z = z,
-                y = y,
-                node_deg = node_deg,
-                edge_index = torch.stack([torch.LongTensor(edge_src), torch.LongTensor(edge_dst)], dim = 0),
-                edge_shift = torch.tensor(edge_shift, dtype = torch.float64),
-                edge_vec = torch.tensor(edge_vec, dtype = torch.float64),
-                edge_len = torch.tensor(edge_len, dtype = torch.float64),
-                qpts = torch.from_numpy(qpts).unsqueeze(0),
-                gphonon = torch.from_numpy(gphonon).unsqueeze(0),
-                r_max = r_max,
-                # ucs = None,
-                numb = numb)
     
+    data_dict = {'id': mpid, 'pos': positions, 'lattice': lattice, 'symbol': symbols, 'z': z, 'x': x, 'y': y, 'node_deg': node_deg, 
+                 'edge_index': torch.stack([torch.LongTensor(edge_src), torch.LongTensor(edge_dst)], dim = 0),
+                 'edge_shift': torch.tensor(edge_shift, dtype = torch.float64), 'edge_vec': torch.tensor(edge_vec, dtype = torch.float64),
+                 'edge_len': torch.tensor(edge_len, dtype = torch.float64), 'qpts': torch.tensor(qpts, dtype = torch.float64), 
+                 'r_max': r_max, 'numb': numb, 'ucs': ucs}
+    
+    data = Data(**data_dict)
     return data
 
-def generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an=26, descriptor='mass'):
+def generate_band_structure_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, **kwargs):
+    """
+    Generate a dictionary of band structure data.
+    Args:
+        data_dir (str): Directory to store the data.
+        run_name (str): Name of the run.
+        data (dict): Dictionary containing data to process.
+        r_max (float): Cutoff radius for neighbor list.
+        descriptor (str, optional): Descriptor for node features. Defaults to 'mass'.
+        option (str, optional): Option for virtual node creation. Defaults to 'kmvn'.
+        factor (int, optional): Scaling factor for real values. Defaults to 1000.
+    Returns:
+        dict: Data dictionary containing band structure information.
+    """
     data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
-    vnelem = Atom(vn_an).symbol #!
-    if len(glob.glob(data_dict_path)) == 0:
+    if len(glob.glob(data_dict_path)) == 0: 
         data_dict = dict()
         ids = data['id']
         structures = data['structure']
-        qptss = data['qpts']
-        band_structures = data['band_structure']
-        for id, structure, qpts, band_structure in zip(ids, structures, qptss, band_structures):
+        qptss = data['qpts'] if data['qpts'] is not None else np.zeros((len(ids), 3))
+        reals = data['real']  # data['band_structure']
+        for id, structure, real, qpts in zip(ids, structures, reals, qptss):
             # print(id)
-            gi = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
-            data_dict[id] = build_data_vvn(id, structure, qpts[gi], band_structure[gi], r_max, vnelem, descriptor)
+            data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, **kwargs)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))

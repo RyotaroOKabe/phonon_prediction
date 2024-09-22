@@ -4,18 +4,16 @@ import numpy as np
 import pandas as pd
 import math
 from scipy.stats import gaussian_kde
-from scipy.stats import gaussian_kde
 from scipy.optimize import curve_fit
 from matplotlib.ticker import FormatStrFormatter
-from ase import Atoms, Atom
+from ase import Atom
 from copy import copy
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import sklearn
 import time
 from tqdm import tqdm
 palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
+save_extention = 'pdf'
 
 
 def loss_plot(model_file, device, fig_file):
@@ -30,7 +28,7 @@ def loss_plot(model_file, device, fig_file):
     ax.set_xlabel('epochs')
     ax.set_ylabel('loss')
     ax.legend()
-    fig.savefig(fig_file  + '_loss_train_valid.png')
+    fig.savefig(f'{fig_file}_loss_train_valid.{save_extention}')
     plt.close()
 
 def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
@@ -40,10 +38,10 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            if option in ['kmvn']:   #!
+            if option in ['kmvn']:   
                 Hs, shifts = model(d)
-                output = get_spectra(Hs, shifts, d.qpts)
-            else:   #!
+                output = get_spectra_(Hs, shifts, d.qpts)
+            else:   
                 output = model(d)
             loss = loss_fn(output, d.y).cpu()
             loss_test.append(loss)
@@ -52,7 +50,7 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     ax.plot(np.array(loss_test), label = 'testing loss: ' + str(np.mean(loss_test)))
     ax.set_ylabel('loss')
     ax.legend()
-    fig.savefig(fig_file + '_loss_test.png')
+    fig.savefig(f'{fig_file}_loss_test.{save_extention}')
     plt.close()
 
 def simname(symbol):
@@ -217,12 +215,12 @@ def plot_bands(df_in, header,
     num = len(tiles)
     xtiles = np.quantile(ds['loss'].values, tiles)
     iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
-    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=False)) for k in range(1,num+1)])
+    replace = True if len(ds) < n*m*num else False
+    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=replace)) for k in range(1,num+1)])
     # delete the lines below:
     fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
     axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
-    fig0.savefig(f"{header}_{title}_dist.png")
-    fig0.savefig(f"{header}_{title}_dist.pdf")
+    fig0.savefig(f"{header}_{title}_dist.{save_extention}")
     # delete up to this line
     fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
     gs = axs[0,0].get_gridspec()
@@ -262,8 +260,7 @@ def plot_bands(df_in, header,
     fig.subplots_adjust(hspace=0.6)
     fig.patch.set_facecolor('white')
     if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-    fig.savefig(f"{header}_{title}_bands.png")
-    fig.savefig(f"{header}_{title}_bands.pdf")
+    fig.savefig(f"{header}_{title}_bands.{save_extention}")
     print(id_list)
 
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
@@ -286,13 +283,13 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
     num = len(tiles)
     xtiles = np.quantile(ds['loss'].values, tiles)
     iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
-    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=False)) for k in range(1,num+1)])
+    replace = True if len(ds) < n*m*num else False
+    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=replace)) for k in range(1,num+1)])
     
     # delete the lines below:
     fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
     axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
-    fig0.savefig(f"{header}_{title}_dist.png")
-    fig0.savefig(f"{header}_{title}_dist.pdf")
+    fig0.savefig(f"{header}_{title}_dist.{save_extention}")
     # delete up to this line
     
     fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
@@ -334,8 +331,7 @@ def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4
     fig.subplots_adjust(hspace=0.6)
     fig.patch.set_facecolor('white')
     if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-    fig.savefig(f"{header}_{title}_gphonons.png")
-    fig.savefig(f"{header}_{title}_gphonons.pdf")
+    fig.savefig(f"{header}_{title}_gphonons.{save_extention}")
     print(id_list)
 
 
@@ -381,9 +377,7 @@ def compare_corr(df1, df2, color1, color2, header, size=5, r2=False):
     fig.tight_layout()
     fig.subplots_adjust(hspace=0.6)
     fig.patch.set_facecolor('white')
-    fig.savefig(f"{header}scatter_compare.png")
-    fig.savefig(f"{header}scatter_compare.pdf")
-    fig.savefig(f"{header}scatter_compare.svg")
+    fig.savefig(f"{header}scatter_compare.{save_extention}")
 
 def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), lw=3):
     """ Compare the distribution of the loss of the two models
@@ -427,8 +421,7 @@ def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), 
     # fig.subplots_adjust(hspace=0.6)
     fig.patch.set_facecolor('white')
     if labels: fig.suptitle(f'{labels[0]}_{labels[1]}', ha='center', y=1., fontsize=16)
-    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.png")
-    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.pdf")
+    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.{save_extention}")
 
 
 def get_element_statistics(data_set):
@@ -525,4 +518,4 @@ def plot_element_count_stack(data_set1, data_set2, header=None, title=None,
         ax1.set_ylabel('Counts', fontsize=24)
     if title: fig.suptitle(title, ha='center', y=1., fontsize=20)
     fig.patch.set_facecolor('white')
-    fig.savefig(f'{header}_element_count_{title}.png')
+    fig.savefig(f'{header}_element_count_{title}.{save_extention}')

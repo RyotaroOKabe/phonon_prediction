@@ -13,12 +13,13 @@ from utils.utils_load import load_band_structure_data   #, load_data
 from utils.utils_data import generate_band_structure_data_dict
 from utils.utils_model import BandLoss, GraphNetwork, train
 from utils.utils_plot import generate_dafaframe, plot_bands, plot_element_count_stack
+from utils.helpers import make_dict
 torch.set_default_dtype(torch.float64)
 if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-seed=None #42
+seedn=42
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
@@ -36,71 +37,37 @@ model_dir = './models'
 data_dir = './data'
 raw_dir = './data/phonon'
 data_file = 'DFPT_band_structure.pkl'
-
-print('torch device: ', device)
-print('model name: ', run_name)
-print('data_file: ', data_file)
-
 tr_ratio = 0.9
 batch_size = 1
 k_fold = 5
 
-print('\ndata parameters')
-print('method: ', k_fold, '-fold cross validation')
-print('training ratio: ', tr_ratio)
-print('batch size: ', batch_size)
-
-#%%
-##########################
-
-# Parameters (continue)
-
-##########################
-
-max_iter = 200 #200
-lmax = 2 #2
-mul = 4 #4
-nlayers = 2 #5
-r_max = 4 #4
-number_of_basis = 10 #10
-radial_layers = 1 #1
-radial_neurons = 100 #100
+max_iter = 200 
+lmax = 2 
+mul = 4 
+nlayers = 2 
+r_max = 4 
+number_of_basis = 10 
+radial_layers = 1
+radial_neurons = 100 
 node_dim = 118
-node_embed_dim = 32 #32
+node_embed_dim = 32 
 input_dim = 118
-input_embed_dim = 32 #32
+input_embed_dim = 32 
 irreps_out = '2x0e+2x1e+2x2e'
 option = 'kmvn'
 
-print('\nmodel parameters')
-print('max iteration: ', max_iter)
-print('max l: ', lmax)
-print('multiplicity: ', mul)
-print('convolution layer: ', nlayers)
-print('cut off radius for neighbors: ', r_max)
-print('radial distance bases: ', number_of_basis)
-print('radial embedding layers: ', radial_layers)
-print('radial embedding neurons per layer: ', radial_neurons)
-print('node attribute dimension: ', node_dim)
-print('node attribute embedding dimension: ', node_embed_dim)
-print('input dimension: ', input_dim)
-print('input embedding dimension: ', input_embed_dim)
-print('irreduceble output representation: ', irreps_out)
-print('Model option: ', option)
-
-#%%
 loss_fn = BandLoss()
-lr = 0.005 # random.uniform(0.001, 0.05) #0.005
-weight_decay = 0.05 # random.uniform(0.01, 0.5) #0.05
-schedule_gamma = 0.96 # random.uniform(0.85, 0.99) #0.96
+lr = 0.005
+weight_decay = 0.05 
+schedule_gamma = 0.96 
 
-print('\noptimization parameters')
-print('loss function: ', loss_fn)
-print('optimization function: AdamW')
-print('learning rate: ', lr)
-print('weight decay: ', weight_decay)
-print('learning rate scheduler: exponentialLR')
-print('schedule factor: ', schedule_gamma)
+conf_dict = make_dict([run_name, model_dir, data_dir, raw_dir, data_file, tr_ratio, batch_size, k_fold, 
+                       max_iter, lmax, mul, nlayers, r_max, number_of_basis, radial_layers, radial_neurons, 
+                       node_dim, node_embed_dim, input_dim, input_embed_dim, irreps_out, option, 
+                       loss_fn, lr, weight_decay, schedule_gamma, device, seedn])
+
+for k, v in conf_dict.items():
+    print(f'{k}: {v}')
 
 #%%
 ##########################
@@ -125,7 +92,7 @@ data_dict = generate_band_structure_data_dict(data_dir, run_name, data, r_max)
 num = len(data_dict)
 tr_nums = [int((num * tr_ratio)//k_fold)] * k_fold
 te_num = num - sum(tr_nums)
-idx_tr, idx_te = train_test_split(range(num), test_size=te_num, random_state=seed)
+idx_tr, idx_te = train_test_split(range(num), test_size=te_num, random_state=seedn)
 with open(f'./data/idx_{run_name}_tr.txt', 'w') as f: 
     for idx in idx_tr: f.write(f"{idx}\n")
 with open(f'./data/idx_{run_name}_te.txt', 'w') as f: 
@@ -180,5 +147,3 @@ train(model,
       k_fold,
       option=option)
 
-
-# %%

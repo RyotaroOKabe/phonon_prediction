@@ -12,13 +12,46 @@ sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import sklearn
 import time
 from tqdm import tqdm
-# palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
 palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
-save_extention = 'pdf'
+save_extension = 'pdf'
+
+chemical_symbols = [
+
+    # 1
+    'H', 'He',
+    # 2
+    'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+    # 3
+    'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar',
+    # 4
+    'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+    'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
+    # 5
+    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
+    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe',
+    # 6
+    'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy',
+    'Ho', 'Er', 'Tm', 'Yb', 'Lu',
+    'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
+    'Po', 'At', 'Rn',
+    # 7
+    'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk',
+    'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr',
+    'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc',
+    'Lv', 'Ts', 'Og']
 
 
-def loss_plot(model_file, device, fig_file):
-    history = torch.load(model_file, map_location = device)['history']
+def save_figure(fig, filename, title=None):
+    fig.patch.set_facecolor('white')
+    if title:
+        fig.suptitle(title, ha='center', y=1., fontsize=16)
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.6) #!
+    fig.savefig(f"{filename}.{save_extension}")
+    # plt.close(fig)
+
+
+def plot_loss(history, filename):
     steps = [d['step'] + 1 for d in history]
     loss_train = [d['train']['loss'] for d in history]
     loss_valid = [d['valid']['loss'] for d in history]
@@ -26,33 +59,33 @@ def loss_plot(model_file, device, fig_file):
     fig, ax = plt.subplots(figsize=(6, 5))
     ax.plot(steps, loss_train, 'o-', label='Training', color=palette[3])
     ax.plot(steps, loss_valid, 'o-', label='Validation', color=palette[1])
-    ax.set_xlabel('epochs')
-    ax.set_ylabel('loss')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Loss')
     ax.legend()
-    fig.savefig(f'{fig_file}_loss_train_valid.{save_extention}')
-    # plt.close()
+    save_figure(fig, filename, title="Loss over Epochs")
+    
 
-def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
-    loss_test = []
-    model.to(device)
+def plot_test_loss(model, dataloader, loss_fn, device, filename, option='kmvn'):
     model.eval()
+    model.to(device)
+    loss_test = []
+
     with torch.no_grad():
         for d in dataloader:
             d.to(device)
-            if option in ['kmvn']:   
+            if option == 'kmvn':
                 Hs, shifts = model(d)
                 output = get_spectra_(Hs, shifts, d.qpts)
-            else:   
+            else:
                 output = model(d)
             loss = loss_fn(output, d.y).cpu()
             loss_test.append(loss)
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.plot(np.array(loss_test), label = 'testing loss: ' + str(np.mean(loss_test)), color=palette[3])
-    ax.set_ylabel('loss')
+    ax.plot(np.array(loss_test), label=f'Testing Loss: {np.mean(loss_test)}', color=palette[3])
+    ax.set_ylabel('Loss')
     ax.legend()
-    fig.savefig(f'{fig_file}_loss_test.{save_extention}')
-    plt.close()
+    save_figure(fig, filename, title="Test Loss")
 
 def simname(symbol):
     count = 0
@@ -71,85 +104,68 @@ def simname(symbol):
     return name
 
 
-def loss_dist(axl, ds, num, palette, xtiles, fontsize):
-    """_summary_
+
+def loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y'):
+    """
+    General function to plot the KDE distribution on either x or y axis.
 
     Args:
-        axl (_type_): _description_
-        ds (_type_): _description_
-        num (_type_): _description_
-        palette (_type_): _description_
-        xtiles (_type_): _description_
-        fontsize (_type_): _description_
+        axl (matplotlib.axes.Axes): Axis object where the plot is drawn.
+        ds (pandas.DataFrame): DataFrame containing the data.
+        num (int): Number of palette colors to use.
+        palette (list): List of colors for the plot.
+        xtiles (list): Quantiles used for shading.
+        fontsize (int): Font size for the axis labels.
+        axis (str, optional): Axis on which to plot ('x' or 'y'). Defaults to 'y'.
 
     Returns:
-        _type_: _description_
+        axl (matplotlib.axes.Axes): Modified axis with the KDE plot.
+        cols (list): List of colors used in the plot.
     """
-    y_min, y_max = ds['loss'].min(), ds['loss'].max()
-    y = np.linspace(y_min, y_max, 5000)
+    loss_min, loss_max = ds['loss'].min(), ds['loss'].max()
+    points = np.linspace(loss_min, loss_max, 5000)
     kde = gaussian_kde(list(ds['loss']))
-    p = kde.pdf(y)
-    axl.plot(p, y, color='black')
+    density = kde.pdf(points)
+    
+    if axis == 'y':
+        axl.plot(density, points, color='black')
+    else:
+        axl.plot(points, density, color='black')
+    
+    # Prepare colors for quantile filling
     cols = palette[:num]
     cols_rev = copy(cols)
     cols_rev.reverse()
-    qs =  list(xtiles)[::-1] + [0]
-    for i in range(len(qs)-1):
-        axl.fill_between([p.min(), p.max()], y1=[qs[i], qs[i]], y2=[qs[i+1], qs[i+1]], color=cols_rev[i], lw=0, alpha=0.5)
-    axl.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
-    axl.invert_yaxis()
-    axl.set_xticks([])
-    axl.set_yscale('log')
-    axl.tick_params(axis='y', which='major', labelsize=fontsize)
-    axl.tick_params(axis='y', which='minor', labelsize=fontsize)
-    axl.yaxis.set_minor_formatter(FormatStrFormatter("%.5f"))
-    axl.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
-    return axl, cols
-
-
-# delete this function later
-def loss_distx(axl, ds, num, palette, xtiles, fontsize):
-    """_summary_
-
-    Args:
-        axl (_type_): _description_
-        ds (_type_): _description_
-        num (_type_): _description_
-        palette (_type_): _description_
-        xtiles (_type_): _description_
-        fontsize (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    x_min, x_max = ds['loss'].min(), ds['loss'].max()
-    x = np.linspace(x_min, x_max, 5000)
-    kde = gaussian_kde(list(ds['loss']))
-    p = kde.pdf(x)
-    axl.plot(x, p, color='black')
-    cols = palette[:num]
-    cols_rev = copy(cols)
-    cols_rev.reverse()
-    qs =  list(xtiles)[::-1] + [0]
-    for i in range(len(qs)-1):
-        # print('i: ', i)
-        # print('[qs[i], qs[i+1]]: ', [qs[i], qs[i+1]])
-        # print('p: ', p.shape)
-        xqs = np.arange(qs[i+1], qs[i], len(p))
-        # axl.fill_between(x=xqs, y1=np.zeros_like(p), y2=p, color=cols_rev[i], lw=0, alpha=0.5)
-        axl.fill_between(x, p, where = (x >= qs[i+1]) & (x <= qs[i]), color=cols_rev[i], lw=0, alpha=0.5)
-    axl.ticklabel_format(axis='x', style='sci', scilimits=(0,0))
-    # axl.invert_yaxis()
-    axl.set_yticks([])
-    axl.set_xscale('log')
-    axl.tick_params(axis='x', which='major', labelsize=fontsize, rotation=90)
-    axl.tick_params(axis='x', which='minor', labelsize=fontsize, rotation=90)
-    axl.xaxis.set_minor_formatter(FormatStrFormatter("%.5f"))
-    axl.xaxis.set_major_formatter(FormatStrFormatter("%.5f"))
-    # Remove the top and right spines
-    axl.spines['top'].set_visible(False)
-    axl.spines['right'].set_visible(False)
-    axl.spines['left'].set_visible(False)
+    quantiles = list(xtiles)[::-1] + [0]
+    
+    for i in range(len(quantiles) - 1):
+        if axis == 'y':
+            axl.fill_between([density.min(), density.max()], y1=[quantiles[i], quantiles[i]], y2=[quantiles[i + 1], quantiles[i + 1]], color=cols_rev[i], lw=0, alpha=0.5)
+        else:
+            axl.fill_between(points, density, where=(points >= quantiles[i + 1]) & (points <= quantiles[i]), color=cols_rev[i], lw=0, alpha=0.5)
+    
+    if axis == 'y':
+        axl.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+        axl.invert_yaxis()
+        axl.set_xticks([])
+        axl.set_yscale('log')
+        axl.tick_params(axis='y', which='major', labelsize=fontsize)
+        axl.tick_params(axis='y', which='minor', labelsize=fontsize)
+        axl.yaxis.set_minor_formatter(FormatStrFormatter("%.5f"))
+        axl.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
+    else:
+        axl.ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+        axl.set_yticks([])
+        axl.set_xscale('log')
+        axl.tick_params(axis='x', which='major', labelsize=fontsize, rotation=90)
+        axl.tick_params(axis='x', which='minor', labelsize=fontsize, rotation=90)
+        axl.xaxis.set_minor_formatter(FormatStrFormatter("%.5f"))
+        axl.xaxis.set_major_formatter(FormatStrFormatter("%.5f"))
+        # Remove top and right spines for the x-axis plot
+        axl.spines['top'].set_visible(False)
+        axl.spines['right'].set_visible(False)
+        axl.spines['left'].set_visible(False)
+    
     return axl, cols
 
 
@@ -164,25 +180,26 @@ def get_spectra_(Hs, shifts, qpts):
     eigvals = torch.sqrt(eigvals + epsilon)
     return torch.sort(torch.real(eigvals))[0]
 
-def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
+    
+
+def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor=1000):
     with torch.no_grad():
-        df = pd.DataFrame(columns=['id', 'name', 'loss', 'real_band', 'output_test', 'time', 'numb'])
+        df = pd.DataFrame(columns=['id', 'name', 'loss', 'real', 'pred', 'time', 'numb'])
         for d in tqdm(dataloader):
-            try: 
+            try:
                 d.to(device)
-                # if len(d.pos) > 60:
-                #     continue
                 start_time = time.time()
-                if option in ['kmvn']:
+                if option == 'kmvn':
                     Hs, shifts = model(d)
                     output = get_spectra_(Hs, shifts, d.qpts)
                 else:
                     output = model(d)
                 run_time = time.time() - start_time
                 loss = loss_fn(output, d.y).cpu()
-                real = d.y.cpu().numpy()*1000
-                pred = output.cpu().numpy()*1000
-                rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real_band': list(real), 'output_test': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
+
+                real = d.y.cpu().numpy() * factor
+                pred = output.cpu().numpy() * factor
+                rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
                 df0 = pd.DataFrame(data = rrr)
                 df = pd.concat([df, df0], ignore_index=True)
             except Exception as e:
@@ -190,239 +207,191 @@ def generate_dafaframe(model, dataloader, loss_fn, device, option='kmvn'):
                 continue
     return df
 
-def plot_bands(df_in, header, 
-               title=None, 
-               n=5, m=1, lwidth=0.5, 
-               windowsize=(3, 2), palette=palette, 
-               formula=True, gtruth=True):
-    """_summary_
 
-    Args: 
-        df_in (pandas.core.frame.DataFrame): Dataframe
-        header (str): header as the save dir and file name
-        title (str, optional): Figure title. Defaults to None.
-        n (int, optional): Number of bands to plot. Defaults to 5.
-        m (int, optional): Number of materials to plot. Defaults to 1.
-        lwidth (float, optional): Line width. Defaults to 0.5.
-        windowsize (tuple, optional): Figure size. Defaults to (3, 2).
-        palette (list, optional): Color palette. Defaults to palette.
-        formula (bool, optional): Whether to use formula name. Defaults to True.
-        gtruth (bool, optional): Whether to plot ground truth. Defaults to True.
+def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_func=None, plot_real=True, save_lossx=False):
     """
-    fontsize = 10
-    i_mse = np.argsort(df_in['loss'])
-    ds = df_in.iloc[i_mse][['id', 'name', 'real_band', 'output_test', 'loss']].reset_index(drop=True)
-    tiles = (1/3, 2/3, 1.)
-    num = len(tiles)
-    xtiles = np.quantile(ds['loss'].values, tiles)
-    iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
-    replace = True if len(ds) < n*m*num else False
-    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=replace)) for k in range(1,num+1)])
-    # delete the lines below:
-    fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
-    axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
-    fig0.savefig(f"{header}_{title}_dist.{save_extention}")
-    # delete up to this line
-    fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
-    gs = axs[0,0].get_gridspec()
-    # remove the underlying axes
-    for ax in axs[:,0]:
-        ax.remove()
-    # add long axis
-    axl = fig.add_subplot(gs[:,0])
-    axl, cols=loss_dist(axl, ds, num, palette, xtiles, fontsize)
-    cols = np.repeat(cols, n*m)
-    axs = axs[:,1:].ravel()
-    id_list = []
-    for k in range(num*m*n):
-        ax = axs[k]
-        i = s[k]
-        realb = ds.iloc[i]['real_band']
-        predb = ds.iloc[i]['output_test']
-        xpts = realb.shape[0]
-        if gtruth:
-            ax.plot(range(xpts), realb, color='k', linewidth=lwidth*0.8)
-        ax.plot(range(xpts), predb, color=cols[k], linewidth=lwidth)
-        id_list.append(ds.iloc[i]['id'])
-        if formula:
-            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
-        else:
-            ax.set_title(ds.iloc[i]['id'].translate(sub), fontsize=fontsize*1.8)
-        min_y1, max_y1 = np.min(realb), np.max(realb)
-        min_y2, max_y2 = np.min(predb), np.max(predb)
-        min_y = min([min_y1, min_y2])
-        max_y = max([max_y1, max_y2])
-        width_y = max_y - min_y
-        ax.set_ylim(min_y-0.05*width_y, max_y+0.05*width_y)
-        ax.tick_params(axis='y', which='major', labelsize=fontsize)
-        ax.tick_params(axis='y', which='minor', labelsize=fontsize)
-        ax.set_xticks([])
-    fig.tight_layout()
-    fig.subplots_adjust(hspace=0.6)
-    fig.patch.set_facecolor('white')
-    if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-    fig.savefig(f"{header}_{title}_bands.{save_extention}")
-    print(id_list)
-
-def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True):
-    """
+    General function to plot data (bands, phonons, etc.)
+    
     Args:
-        df_in (pandas.core.frame.DataFrame): Dataframe
+        df_in (pandas.core.frame.DataFrame): DataFrame containing the data
         header (str): header as the save dir and file name
         title (str, optional): Figure title. Defaults to None.
         n (int, optional): Number of columns to plot. Defaults to 5.
         m (int, optional): Number of rows to plot per each tertile. Defaults to 1.
         lwidth (float, optional): Line width. Defaults to 0.5.
-        windowsize (tuple, optional): Figure size. Defaults to (4, 2).
-    
+        windowsize (tuple, optional): Figure size. Defaults to (3, 2).
+        palette (list, optional): Color palette for plotting. Defaults to palette.
+        formula (bool, optional): Whether to use formula name in title. Defaults to True.
+        plot_func (function): A custom plotting function that plots the specific type of data (bands, phonons, etc.).
+        save_lossx (bool, optional): Whether to save the loss distribution plot on the x-axis. Defaults to False.
     """
-    # function to plot gamma phonons of the tertiles. 
     fontsize = 10
     i_mse = np.argsort(df_in['loss'])
-    ds = df_in.iloc[i_mse][['id', 'name', 'real_band', 'output_test', 'loss']].reset_index(drop=True)
+    ds = df_in.iloc[i_mse][['id', 'name', 'real', 'pred', 'loss']].reset_index(drop=True)
     tiles = (1/3, 2/3, 1.)
     num = len(tiles)
     xtiles = np.quantile(ds['loss'].values, tiles)
     iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
-    replace = True if len(ds) < n*m*num else False
-    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m*n, replace=replace)) for k in range(1,num+1)])
-    
-    # delete the lines below:
-    fig0, axl0 = plt.subplots(1,1, figsize=(18, 2))
-    axl0, cols0=loss_distx(axl0, ds, num, palette, xtiles, fontsize)
-    fig0.savefig(f"{header}_{title}_dist.{save_extention}")
-    # delete up to this line
-    
-    fig, axs = plt.subplots(num*m,n+1, figsize=((n+1)*windowsize[1], num*m*windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1]*n})
-    gs = axs[0,0].get_gridspec()
-    # remove the underlying axes
-    for ax in axs[:,0]:
-        ax.remove()
-    # add long axis
-    axl = fig.add_subplot(gs[:,0])
-    axl, cols=loss_dist(axl, ds, num, palette, xtiles, fontsize)
+    replace = True if len(ds) < n * m * num else False
+    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m * n, replace=replace)) for k in range(1, num + 1)])
 
-    cols = np.repeat(cols, n*m)
-    axs = axs[:,1:].ravel()
+    # Create the distribution plot (optional)
+    if save_lossx:
+        fig0, axl0 = plt.subplots(1, 1, figsize=(18, 2))
+        axl0, cols0 = loss_dist_general(axl0, ds, num, palette, xtiles, fontsize, axis='x')
+        fig0.savefig(f"{header}_{title}_dist.{save_extension}")
+
+    # Setup the main plot figure and axes
+    fig, axs = plt.subplots(num * m, n + 1, figsize=((n + 1) * windowsize[1], num * m * windowsize[0]), gridspec_kw={'width_ratios': [0.7] + [1] * n})
+    gs = axs[0, 0].get_gridspec()
+
+    # Remove the first column axes (for the long axis)
+    for ax in axs[:, 0]:
+        ax.remove()
+
+    # Add long axis for KDE
+    axl = fig.add_subplot(gs[:, 0])
+    axl, cols = loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y')
+
+    cols = np.repeat(cols, n * m)
+    axs = axs[:, 1:].ravel()
+
     id_list = []
-    for k in range(num*m*n):
+    for k in range(num * m * n):
         ax = axs[k]
+        if k >= len(s):  # If we run out of samples, stop plotting
+            break
         i = s[k]
-        realg = ds.iloc[i]['real_band'].reshape(-1)
-        predg = ds.iloc[i]['output_test'].reshape(-1)
-        # print(f'[{i}] realg, predg: ', realg.shape, predg.shape)
-        for j in range(ds.iloc[i]['real_band'].shape[0]):
-            ax.hlines(realg[j], 0.2, 1.2,color='k', linewidth=lwidth*0.6)
-            ax.hlines(predg[j], 1.5, 2.5,color=cols[k], linewidth=lwidth)
+        real = ds.iloc[i]['real']
+        pred = ds.iloc[i]['pred']
+        
+        # Use the custom plotting function to handle specifics of the data (bands, phonons, etc.)
+        plot_func(ax, real, pred, cols[k], lwidth, plot_real=plot_real)
+
+        # Set titles and formatting
         if formula:
-            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize*1.8)
+            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize * 1.8)
         else:
-            ax.set_title(ds.iloc[i]['id'].translate(sub), fontsize=fontsize*1.8)
+            ax.set_title(ds.iloc[i]['id'], fontsize=fontsize * 1.8)
         id_list.append(ds.iloc[i]['id'])
-        min_x, max_x = 0.2, 2.5
-        min_y1, max_y1, min_y2, max_y2 = np.min(realg), np.max(realg), np.min(predg), np.max(predg)
-        min_y, max_y = min([min_y1, min_y2]), max([max_y1, max_y2])
-        width_x, width_y = max_x - min_x, max_y - min_y
-        ax.set_xlim(min_x-0.05*width_x, max_x+0.05*width_x)
-        ax.set_ylim(min_y-0.05*width_y, max_y+0.05*width_y)
-        ax.tick_params(axis='y', which='major', labelsize=12)
-        ax.tick_params(axis='y', which='minor', labelsize=10)
+        min_y = min(np.min(real), np.min(pred))
+        max_y = max(np.max(real), np.max(pred))
+        ax.set_ylim(min_y - 0.05 * (max_y - min_y), max_y + 0.05 * (max_y - min_y))
+        ax.tick_params(axis='y', which='major', labelsize=fontsize)
         ax.set_xticks([])
-    fig.tight_layout()
-    fig.subplots_adjust(hspace=0.6)
-    fig.patch.set_facecolor('white')
-    if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize)
-    fig.savefig(f"{header}_{title}_gphonons.{save_extention}")
+
+    save_figure(fig, f"{header}_{title}", title=title)
     print(id_list)
 
+# Specific plotting functions for bands and phonons
+def plot_band(ax, real, pred, color, lwidth, plot_real=True):
+    xpts = pred.shape[0]
+    if plot_real and real is not None:
+        ax.plot(range(xpts), real, color='k', linewidth=lwidth * 0.8)
+    ax.plot(range(xpts), pred, color=color, linewidth=lwidth)
 
-def compare_corr(df1, df2, color1, color2, header, size=5, r2=False):
-    """ Plot the scatter plot of the predicted vs true values of the two models
+def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True):
+    min_x, max_x = 1.5, 2.5
+    if plot_real and real is not None:
+        real = real.reshape(-1)
+        min_x = 0.2
+    pred = pred.reshape(-1)
+    for j in range(real.shape[0]):
+        if plot_real and real is not None:
+            ax.hlines(real[j], 0.2, 1.2, color='k', linewidth=lwidth * 0.6)
+        ax.hlines(pred[j], 1.5, 2.5, color=color, linewidth=lwidth)
+    width_x = max_x - min_x
+    ax.set_xlim(min_x-0.05*width_x, max_x+0.05*width_x)
+
+# Now, you can use `plot_general` for both bands and phonons
+def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False):
+    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx)
+
+def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, plot_real=True, save_lossx=False):
+    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx)
+
+
+def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2'), size=5, lw=3, r2=False):
+    """
+    Merged function to compare two models by plotting the scatter correlation of predicted vs true values 
+    and the loss distribution in one figure.
 
     Args:
-        df1 (pandas.core.frame.DataFrame): Dataframe1
-        df2 (pandas.core.frame.DataFrame): Dataframe2
-        color1 (str): Hex color for df1's correlation plot
-        color2 (str): Hex color for df1's correlation plot
-        header (str): header as the save dir and file name
-        size (int, optional): Size of the data points. Defaults to 5.
+        df1 (pandas.core.frame.DataFrame): Dataframe for Model 1
+        df2 (pandas.core.frame.DataFrame): Dataframe for Model 2
+        color1 (str): Hex color for df1's plots
+        color2 (str): Hex color for df2's plots
+        header (str): Header as the save dir and file name
+        labels (tuple, optional): Legends for the models. Defaults to ('Model1', 'Model2').
+        size (int, optional): Size of the scatter plot points. Defaults to 5.
+        lw (int, optional): Line width for the KDE plot. Defaults to 3.
+        r2 (bool, optional): Whether to calculate and display R^2 scores. Defaults to False.
     """
-    re_out1 = np.concatenate([df1.iloc[i]['real_band'].flatten() for i in range(len(df1))])
-    pr_out1 = np.concatenate([df1.iloc[i]['output_test'].flatten() for i in range(len(df1))])
-    re_out2 = np.concatenate([df2.iloc[i]['real_band'].flatten() for i in range(len(df2))])
-    pr_out2 = np.concatenate([df2.iloc[i]['output_test'].flatten() for i in range(len(df2))])
-    min_x1, max_x1 = np.min(re_out1), np.max(re_out1)
-    min_y1, max_y1 = np.min(pr_out1), np.max(pr_out1)
-    min_x2, max_x2 = np.min(re_out2), np.max(re_out2)
-    min_y2, max_y2 = np.min(pr_out2), np.max(pr_out2)
-    minimum = min(min_x1, min_x2, min_y1, min_y2)
-    maximum = max(max_x1, max_x2,max_y1, max_y2)
-    width = maximum - minimum
-    fig, ax = plt.subplots(1,1, figsize=(6, 6))
-    ax.plot([minimum-0.01*width, maximum+0.01*width], [minimum-0.01*width, maximum+0.01*width], color='k')
-    ax.set_xlim(minimum-0.01*width, maximum+0.01*width)
-    ax.set_ylim(minimum-0.01*width, maximum+0.01*width)
+    # Prepare data for scatter plot (correlation)
+    re_out1 = np.concatenate([df1.iloc[i]['real'].flatten() for i in range(len(df1))])
+    pr_out1 = np.concatenate([df1.iloc[i]['pred'].flatten() for i in range(len(df1))])
+    re_out2 = np.concatenate([df2.iloc[i]['real'].flatten() for i in range(len(df2))])
+    pr_out2 = np.concatenate([df2.iloc[i]['pred'].flatten() for i in range(len(df2))])
 
-    ax.scatter(re_out1, pr_out1, s=size, marker='.', color=color1)
-    ax.scatter(re_out2, pr_out2, s=size, marker='.', color=color2)
+    min_val = min(re_out1.min(), pr_out1.min(), re_out2.min(), pr_out2.min())
+    max_val = max(re_out1.max(), pr_out1.max(), re_out2.max(), pr_out2.max())
+    width = max_val - min_val
 
-    ax.tick_params(axis='both', which='major', labelsize=15)
-    ax.tick_params(axis='both', which='minor', labelsize=12)
-    ax.set_xlabel('True $\omega$ [$cm^{-1}$]', fontsize=16)
-    ax.set_ylabel('Predicted $\omega$ [$cm^{-1}$]', fontsize=16)
+    # Prepare data for loss distribution
+    min_x1_loss, max_x1_loss = df1['loss'].min(), df1['loss'].max()
+    x1_loss = np.linspace(min_x1_loss, max_x1_loss, 500)
+    kde1 = gaussian_kde(df1['loss'])
+    p1 = kde1.pdf(x1_loss)
+
+    min_x2_loss, max_x2_loss = df2['loss'].min(), df2['loss'].max()
+    x2_loss = np.linspace(min_x2_loss, max_x2_loss, 500)
+    kde2 = gaussian_kde(df2['loss'])
+    p2 = kde2.pdf(x2_loss)
+
+    # Create subplots for both correlation and loss distribution
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6.8))  # Two subplots in one row
+
+    # Scatter plot (Correlation)
+    ax1 = axs[0]
+    ax1.plot([min_val - 0.01 * width, max_val + 0.01 * width], [min_val - 0.01 * width, max_val + 0.01 * width], color='k')
+    ax1.set_xlim(min_val - 0.01 * width, max_val + 0.01 * width)
+    ax1.set_ylim(min_val - 0.01 * width, max_val + 0.01 * width)
+    ax1.scatter(re_out1, pr_out1, s=size, marker='.', color=color1, label=labels[0])
+    ax1.scatter(re_out2, pr_out2, s=size, marker='.', color=color2, label=labels[1])
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+    ax1.set_xlabel('True $\omega$ [$cm^{-1}$]', fontsize=14)
+    ax1.set_ylabel('Predicted $\omega$ [$cm^{-1}$]', fontsize=14)
+    ax1.legend()
+
+    # If requested, calculate and display R^2 values
     if r2:
         R2_1 = sklearn.metrics.r2_score(y_true=re_out1, y_pred=pr_out1)
         R2_2 = sklearn.metrics.r2_score(y_true=re_out2, y_pred=pr_out2)
-        ax.set_title(f"$R^2 [1] {R2_1} [2] {R2_2}$", fontsize=16)
+        ax1.set_title(f"$R^2 [1]: {R2_1:.3f}$\t$ [2]: {R2_2:.3f}$", fontsize=14)
 
-    fig.tight_layout()
-    fig.subplots_adjust(hspace=0.6)
-    fig.patch.set_facecolor('white')
-    fig.savefig(f"{header}scatter_compare.{save_extention}")
-
-def compare_loss(df1, df2, color1, color2, header, labels=('Model1', 'Model2'), lw=3):
-    """ Compare the distribution of the loss of the two models
-
-    Args:
-        df1 (pandas.core.frame.DataFrame): Dataframe1
-        df2 (pandas.core.frame.DataFrame): Dataframe2
-        color1 (str): Hex color for df1's loss plot
-        color2 (str): Hex color for df1's loss plot
-        header (str): header as the save dir and file name
-        labels (tuple, optional): Legends. Defaults to ('Model1', 'Model2').
-        lw (int, optional): Line width. Defaults to 3.
-    """
-    fig, ax = plt.subplots(1,1, figsize=(6, 6))
-    min_x1, max_x1 = df1['loss'].min(), df1['loss'].max()
-    x1 = np.linspace(min_x1, max_x1, 500)
-    kde1 = gaussian_kde(df1['loss'])
-    p1 = kde1.pdf(x1)
-    ax.plot(x1, p1, color=color1, label=labels[0], lw=lw)
-    min_x2, max_x2 = df2['loss'].min(), df2['loss'].max()
-    x2 = np.linspace(min_x2, max_x2, 500)
-    kde2 = gaussian_kde(df2['loss'])
-    p2 = kde2.pdf(x2)
-    ax.plot(x2, p2, color=color2, label=labels[1], lw=lw)
-    ax.set_xscale('log')
-    min_y1, max_y1 = np.min(p1), np.max(p1)
-    min_y2, max_y2 = np.min(p2), np.max(p2)
-    min_x, max_x = min([min_x1, min_x2]), max([max_x1, max_x2])
-    min_y, max_y = min([min_y1, min_y2]), max([max_y1, max_y2])
-    width_x = max_x - min_x
-    width_y = max_y - min_y
-    ax.set_xlim(min_x-0.08*width_x, max_x+0.08*width_x)
-    ax.set_ylim(min_y-0.08*width_y, max_y+0.08*width_y)
-    ax.tick_params(axis='x', which='major', labelsize=15)
-    ax.tick_params(axis='x', which='minor', labelsize=13)
-    ax.xaxis.set_major_formatter(FormatStrFormatter("%.3f"))
-    ax.legend()
-    ax.set_xlabel('Loss', fontsize=16)
-    ax.set_ylabel('Probability density', fontsize=16)
-    # fig.tight_layout()
-    # fig.subplots_adjust(hspace=0.6)
-    fig.patch.set_facecolor('white')
-    if labels: fig.suptitle(f'{labels[0]}_{labels[1]}', ha='center', y=1., fontsize=16)
-    fig.savefig(f"{header}_{labels[0]}_{labels[1]}_loss_compare.{save_extention}")
+    # Loss Distribution Plot
+    ax2 = axs[1]
+    ax2.plot(x1_loss, p1, color=color1, label=labels[0], lw=lw)
+    ax2.plot(x2_loss, p2, color=color2, label=labels[1], lw=lw)
+    ax2.set_xscale('log')
+    
+    min_y1_loss, max_y1_loss = np.min(p1), np.max(p1)
+    min_y2_loss, max_y2_loss = np.min(p2), np.max(p2)
+    min_x_loss, max_x_loss = min([min_x1_loss, min_x2_loss]), max([max_x1_loss, max_x2_loss])
+    min_y_loss, max_y_loss = min([min_y1_loss, min_y2_loss]), max([max_y1_loss, max_y2_loss])
+    width_x_loss = max_x_loss - min_x_loss
+    width_y_loss = max_y_loss - min_y_loss
+    ax2.set_xlim(min_x_loss - 0.08 * width_x_loss, max_x_loss + 0.08 * width_x_loss)
+    ax2.set_ylim(min_y_loss - 0.08 * width_y_loss, max_y_loss + 0.08 * width_y_loss)
+    
+    ax2.tick_params(axis='x', which='major', labelsize=12)
+    ax2.set_xlabel('Loss', fontsize=14)
+    ax2.set_ylabel('Probability density', fontsize=14)
+    ax2.legend()
+    # Set title for the entire figure
+    fig.suptitle(f'{labels[0]} vs {labels[1]} Comparison', ha='center', y=0.98, fontsize=16)
+    # Save the figure
+    save_figure(fig, f"{header}_model_comparison", title=None)
 
 
 def get_element_statistics(data_set):
@@ -434,89 +403,68 @@ def get_element_statistics(data_set):
     Returns:
         pandas.core.frame.DataFrame: Dataframe of the counts on how many mterials have each elememnt.
     """
-    species = []
-    for Z in range(1, 119):
-        species.append(Atom(Z).symbol)
+    species = [Atom(Z).symbol for Z in range(1, 119)]
     # create dictionary indexed by element names storing index of samples containing given element
     species_dict = {k: [] for k in species}
-    len_data = len(data_set)
-    for i in range(len_data):
-        data = data_set[i]
-        d_species = set([data.symbol[j] for j in range(len(data.symbol))])
 
-        for d_specie in d_species:
-            species_dict[d_specie].append(i)
+    for i, data in enumerate(data_set):
+        for specie in set(data.symbol):  # Use set to avoid duplicates within one sample
+            species_dict[specie].append(i)
 
     # create dataframe of element statistics
     stats = pd.DataFrame({'symbol': species})
-    stats['data'] = stats['symbol'].astype('object')
-    for specie in species:
-        stats.at[stats.index[stats['symbol'] == specie].values[0], 'data'] = species_dict[specie]
-    stats['count'] = stats['data'].apply(len)
+    stats['count'] = stats['symbol'].apply(lambda s: len(species_dict[s]))
     return stats
 
 
-def plot_element_count_stack(data_set1, data_set2, header=None, title=None, 
-                             bar_colors=['#90BE6D', '#277DA1']):
-    """ Get the element statistics of the two datasets and plot the stacked bar chart
+
+def plot_element_count_stack(data_set1, data_set2, header=None, title=None, bar_colors=['#90BE6D', '#277DA1'], save_fig=False):
+    """
+    Get the element statistics for two datasets and plot the stacked bar chart.
 
     Args:
-        data_set1 (torch.utils.data.dataset.Subset): tr_set or te_set
-        data_set2 (torch.utils.data.dataset.Subset): tr_set or te_set
-        header (str): header as the save dir and file name Defaults to None.
-        title (str, optional): Figure title. Defaults to None.
-        bar_colors (list, optional): [color1, color2]. Defaults to ['#90BE6D', '#277DA1'].
+        data_set1, data_set2 (torch.utils.data.dataset.Subset): Two datasets (e.g., training and test sets).
+        header (str): Header for saving the plot.
+        title (str, optional): Title of the plot. Defaults to None.
+        bar_colors (list, optional): Bar colors for the two datasets. Defaults to ['#90BE6D', '#277DA1'].
     """
-    rows=2
+    # Get statistics for both datasets
     stats1 = get_element_statistics(data_set1)
-    stats1_elems = set(stats1[stats1['count']>0]['symbol'])
-    # stats1=stats1[stats1['count']>0].reset_index(drop=True)
     stats2 = get_element_statistics(data_set2)
-    stats2_elems =set(stats2[stats2['count']>0]['symbol'])
-    # stats1=stats1[stats1['count']>0].reset_index(drop=True)
-    elems_common = stats1_elems.union(stats2_elems)
-    idx_stats1 = []
-    idx_stats2 = []
-    for i in range(len(stats1)):
-        if stats1['symbol'][i] in elems_common:
-            idx_stats1.append(i)
-    for i in range(len(stats2)):
-        if stats2['symbol'][i] in elems_common:
-            idx_stats2.append(i)
-    stats1=stats1.iloc[idx_stats1].reset_index(drop=True)
-    stats2=stats2.iloc[idx_stats2].reset_index(drop=True)
 
-    anums1 = {}
-    for l in range(len(stats1)):
-        # if stats['count'][l] > 0:
-        anums1[stats1['symbol'][l]]=stats1['count'][l]
-    anums2 = {}
-    for l in range(len(stats2)):
-        # if stats['count'][l] > 0:
-        anums2[stats2['symbol'][l]]=stats2['count'][l]
-    fig, axs = plt.subplots(rows,1, figsize=(27, 10*rows)) 
-    # for j in range(rows):
-    bar_max = max(anums1.values())+max(anums2.values())
-    if rows==2:
-        ax0=axs[0]
-        cols = max(len(anums1), len(anums2))//rows
-        ax0.bar(range(cols), list(anums1.values())[:cols], width=0.6, color=bar_colors[0], label='Train')
-        ax0.bar(range(cols), list(anums2.values())[:cols], bottom=list(anums1.values())[:cols], width=0.6, color=bar_colors[1], label='Test')
-        ax0.set_xticks(np.arange(cols))
-        ax0.set_xticklabels(list(anums1.keys())[:cols], fontsize = 27)
-        ax0.set_ylim(0, bar_max*1.05)
-        ax0.tick_params(axis='y', which='major', labelsize=23)
-        ax0.legend()
-        ax0.set_ylabel('Counts', fontsize=24)
-        ax1=axs[1]
-        ax1.bar(range(cols, len(anums1)), list(anums1.values())[cols:], width=0.6, color=bar_colors[0], label='Train')
-        ax1.bar(range(cols, len(anums2)), list(anums2.values())[cols:], bottom=list(anums1.values())[cols:], width=0.6, color=bar_colors[1], label='Test')
-        ax1.set_xticks(np.arange(cols, len(anums1)))
-        ax1.set_xticklabels(list(anums1.keys())[cols:], fontsize = 27)
-        ax1.tick_params(axis='y', which='major', labelsize=23)
-        ax1.set_ylim(0, bar_max*1.05)
-        ax1.legend()
-        ax1.set_ylabel('Counts', fontsize=24)
-    if title: fig.suptitle(title, ha='center', y=1., fontsize=20)
-    fig.patch.set_facecolor('white')
-    fig.savefig(f'{header}_element_count_{title}.{save_extention}')
+    # Filter elements that are present in either dataset
+    common_elems = stats1[stats1['count'] > 0]['symbol'].tolist() + stats2[stats2['count'] > 0]['symbol'].tolist()
+    common_elems = sorted(set(common_elems))
+    
+    # sort the elements based on the order in chemical_symbols
+    common_elems = sorted(common_elems, key=lambda x: chemical_symbols.index(x))
+
+    stats1 = stats1[stats1['symbol'].isin(common_elems)].set_index('symbol').reindex(common_elems)
+    stats2 = stats2[stats2['symbol'].isin(common_elems)].set_index('symbol').reindex(common_elems)
+
+    # Create the figure and axes
+    rows = 2
+    fig, axs = plt.subplots(rows, 1, figsize=(27, 10 * rows))
+    bar_max = max(stats1['count'].max(), stats2['count'].max())
+
+    # Plot the stacked bar chart
+    for i, ax in enumerate(axs):
+        col_range = range(i * (len(stats1) // rows), (i + 1) * (len(stats1) // rows))
+        ax.bar(col_range, stats1['count'].iloc[col_range], width=0.6, color=bar_colors[0], label='Train')
+        ax.bar(col_range, stats2['count'].iloc[col_range], bottom=stats1['count'].iloc[col_range], width=0.6, color=bar_colors[1], label='Test')
+        
+        ax.set_xticks(col_range)
+        ax.set_xticklabels(stats1.index[col_range], fontsize=27)
+        ax.set_ylim(0, bar_max * 1.2)
+        ax.tick_params(axis='y', which='major', labelsize=23)
+        ax.set_ylabel('Counts', fontsize=24)
+        ax.legend()
+
+    if title:
+        fig.suptitle(title, ha='center', y=1.0, fontsize=20)
+
+    # Save the figure
+    if save_fig:
+        fig.patch.set_facecolor('white')
+        fig.savefig(f'{header}_element_count_{title}.{save_extension}')
+        save_figure(fig, f'{header}_element_count_{title}', title=title)

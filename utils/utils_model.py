@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 import time
-from utils.utils_plot import generate_dafaframe, plot_bands, plot_gphonons
+from utils.utils_plot import generate_dataframe, plot_bands, plot_gphonons, plot_loss, plot_test_loss
 torch.autograd.set_detect_anomaly(True)
 
 class BandLoss(_Loss):
@@ -278,7 +278,7 @@ class BaseGraphNetwork(torch.nn.Module):
 
             irreps_in = gate.irreps_out
             layers.append(CustomCompose(conv, gate))
-        self.irreps_in_fin = irreps_in    #!
+        self.irreps_in_fin = irreps_in    
         return layers
 
     def _tp_path_exists(self, irreps_in, ir):
@@ -315,7 +315,7 @@ class GraphNetwork_kMVN(BaseGraphNetwork):
         # Adding the missing GraphHamiltonianConvolution layer
         self.layers.append(GraphHamiltonianConvolution(
             # self.irreps_hidden,
-            self.irreps_in_fin,   #!
+            self.irreps_in_fin,   
             self.irreps_node_attr,
             self.irreps_edge_attr,
             self.irreps_out,
@@ -347,7 +347,7 @@ class GraphNetwork_MVN(BaseGraphNetwork):
         # Adding the missing GraphHamiltonianConvolution layer
         self.layers.append(GraphHamiltonianConvolution(
             # self.irreps_hidden,
-            self.irreps_in_fin,   #!
+            self.irreps_in_fin,   
             self.irreps_node_attr,
             self.irreps_edge_attr,
             self.irreps_out,
@@ -436,8 +436,8 @@ def train(model,
           batch_size,
           k_fold,
           option='kmvn',
+          factor=1000,
           conf_dict=None):
-    from utils.utils_plot import loss_plot, loss_test_plot
     model.to(device)
     checkpoint_generator = loglinspace(0.3, 5)
     checkpoint = next(checkpoint_generator)
@@ -519,16 +519,17 @@ def train(model,
                   f"valid loss = {valid_avg_loss:8.20f}   " +
                   f"elapsed time = {time.strftime('%H:%M:%S', time.gmtime(wall))}")
 
-            save_file = f'./models/{run_name}.torch'
-            with open(save_file, 'wb') as f:
+            save_name = f'./models/{run_name}'
+            with open(save_name + '.torch', 'wb') as f:
                 torch.save(results, f)
 
             record_line = '%d\t%.20f\t%.20f'%(step,train_avg_loss,valid_avg_loss)
             record_lines.append(record_line)
-            loss_plot(save_file, device, './models/' + run_name)
-            loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn, option)
-            df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, option)
-            df_te = generate_dafaframe(model, te_loader, loss_fn, device, option)
+            plot_loss(history, save_name + '_loss')
+            plot_test_loss(model, te_loader, loss_fn, device, save_name + '_loss_test', option)
+
+            df_tr = generate_dataframe(model, tr_loader, loss_fn, device, option, factor)
+            df_te = generate_dataframe(model, te_loader, loss_fn, device, option, factor)
             palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
             if option == 'kmvn':
                 plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)

@@ -12,24 +12,25 @@ sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import sklearn
 import time
 from tqdm import tqdm
-palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
+# palette = ['#90BE6D', '#277DA1', '#F8961E', '#F94144']
+palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
 save_extention = 'pdf'
 
 
 def loss_plot(model_file, device, fig_file):
-    history = torch.load(model_file + '.torch', map_location = device)['history']
+    history = torch.load(model_file, map_location = device)['history']
     steps = [d['step'] + 1 for d in history]
     loss_train = [d['train']['loss'] for d in history]
     loss_valid = [d['valid']['loss'] for d in history]
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.plot(steps, loss_train, 'o-', label='Training')
-    ax.plot(steps, loss_valid, 'o-', label='Validation')
+    ax.plot(steps, loss_train, 'o-', label='Training', color=palette[3])
+    ax.plot(steps, loss_valid, 'o-', label='Validation', color=palette[1])
     ax.set_xlabel('epochs')
     ax.set_ylabel('loss')
     ax.legend()
     fig.savefig(f'{fig_file}_loss_train_valid.{save_extention}')
-    plt.close()
+    # plt.close()
 
 def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
     loss_test = []
@@ -47,7 +48,7 @@ def loss_test_plot(model, device, fig_file, dataloader, loss_fn, option='kmvn'):
             loss_test.append(loss)
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.plot(np.array(loss_test), label = 'testing loss: ' + str(np.mean(loss_test)))
+    ax.plot(np.array(loss_test), label = 'testing loss: ' + str(np.mean(loss_test)), color=palette[3])
     ax.set_ylabel('loss')
     ax.legend()
     fig.savefig(f'{fig_file}_loss_test.{save_extention}')

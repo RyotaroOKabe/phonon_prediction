@@ -9,20 +9,20 @@ import time
 import pickle as pkl
 import os
 from sklearn.model_selection import train_test_split
-from utils.utils_load import load_band_structure_data
-from utils.utils_data import generate_gamma_data_dict
-from utils.utils_model import BandLoss, GraphNetwork_VVN, train  #! update
-from utils.utils_plot import generate_dafaframe, plot_gphonons, plot_element_count_stack    #! update
+from utils.utils_load import load_band_structure_data   #, load_data
+from utils.utils_data import generate_data_dict
+from utils.utils_model import BandLoss, GraphNetwork_VVN, train
+# from utils.utils_model_early import BandLoss, GraphNetwork_kMVN, train
+from utils.utils_plot import generate_dafaframe, plot_bands, plot_element_count_stack
+from utils.helpers import make_dict
 torch.set_default_dtype(torch.float64)
 if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-seed=None #42
+seedn=42
 palette = ['#43AA8B', '#F8961E', '#F94144']
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-
-import random
 
 #%%
 ##########################
@@ -31,78 +31,47 @@ import random
 
 ##########################
 
+file_name = os.path.basename(__file__)
+print("File Name:", file_name)
 run_name = time.strftime('%y%m%d-%H%M%S', time.localtime())
 model_dir = './models'
 data_dir = './data'
 raw_dir = './data/phonon'
 data_file = 'DFPT_band_structure.pkl'
-
-print('torch device: ', device)
-print('model name: ', run_name)
-print('data_file: ', data_file)
-
 tr_ratio = 0.9
 batch_size = 1
 k_fold = 5
 
-print('\ndata parameters')
-print('method: ', k_fold, '-fold cross validation')
-print('training ratio: ', tr_ratio)
-print('batch size: ', batch_size)
-
-#%%
-##########################
-
-# Parameters (continue)
-
-##########################
-
-max_iter = 200 #200
-lmax = 2    #random.randint(0, 2) #2
-mul = 16    # random.randint(1, 5) #16
-nlayers = 2 # random.randint(1, 5) #2
-r_max = 4   # random.randint(4, 8) #4
-number_of_basis = 10    #random.randint(5, 20) #10
-radial_layers = 1   #random.randint(1, 2) #1
-radial_neurons = 100    #random.randint(50, 100) #100
+max_iter = 200 
+lmax = 2 
+mul = 16 
+nlayers = 2 
+r_max = 4 
+number_of_basis = 10 
+radial_layers = 1
+radial_neurons = 100 
 node_dim = 118
-node_embed_dim = 16 #random.randint(8, 32) #16
+node_embed_dim = 16 
 input_dim = 118
-input_embed_dim = 16    # random.randint(8, 32) #16
-vn_an = 26  #random.randint(1, 118) #26
+input_embed_dim = 16 
+vn_elem = 'Fe'  # Atom type for diagonal virtual nodes (default: Fe)
 irreps_out = '1x0e'
-option='vvn'
+option = 'vvn'
+descriptor = 'mass'
+factor = 1000
 
-print('\nmodel parameters')
-print('max iteration: ', max_iter)
-print('max l: ', lmax)
-print('multiplicity: ', mul)
-print('convolution layer: ', nlayers)
-print('cut off radius for neighbors: ', r_max)
-print('radial distance bases: ', number_of_basis)
-print('radial embedding layers: ', radial_layers)
-print('radial embedding neurons per layer: ', radial_neurons)
-print('node attribute dimension: ', node_dim)
-print('node attribute embedding dimension: ', node_embed_dim)
-print('input dimension: ', input_dim)
-print('input embedding dimension: ', input_embed_dim)
-print('irreduceble output representation: ', irreps_out)
-print('atomic number of the virtual nodes: ', vn_an)
-print('Model option: ', option)
-
-#%%
 loss_fn = BandLoss()
-lr = 0.005 # random.uniform(0.001, 0.05) #0.005
-weight_decay = 0.05 # random.uniform(0.01, 0.5) #0.05
-schedule_gamma = 0.96 # random.uniform(0.85, 0.99) #0.96
+lr = 0.005
+weight_decay = 0.05 
+schedule_gamma = 0.96 
 
-print('\noptimization parameters')
-print('loss function: ', loss_fn)
-print('optimization function: AdamW')
-print('learning rate: ', lr)
-print('weight decay: ', weight_decay)
-print('learning rate scheduler: exponentialLR')
-print('schedule factor: ', schedule_gamma)
+conf_dict = make_dict([run_name, model_dir, data_dir, raw_dir, data_file, tr_ratio, batch_size, k_fold, 
+                       max_iter, lmax, mul, nlayers, r_max, number_of_basis, radial_layers, radial_neurons, 
+                       node_dim, node_embed_dim, input_dim, input_embed_dim, vn_elem, irreps_out, option, 
+                       loss_fn, lr, weight_decay, schedule_gamma, device, seedn])
+
+for k, v in conf_dict.items():
+    print(f'{k}: {v}')
 
 #%%
 ##########################
@@ -110,27 +79,33 @@ print('schedule factor: ', schedule_gamma)
 # Load data from pkl or csv
 
 ##########################
-os.system(f'rm -r {data_dir}/9850858*')
-os.system(f'rm -r {data_dir}/phonon/')
-os.system(f'cd {data_dir}; wget --no-verbose https://figshare.com/ndownloader/files/9850858')
-os.system(f'cd {data_dir}; tar -xf 9850858')
-os.system(f'rm -r {data_dir}/9850858*')
+
+download_data = True
+if download_data:
+    os.system(f'rm -r {data_dir}/9850858*')
+    os.system(f'rm -r {data_dir}/phonon/')
+    os.system(f'cd {data_dir}; wget --no-verbose https://figshare.com/ndownloader/files/9850858')
+    os.system(f'cd {data_dir}; tar -xf 9850858')
+    os.system(f'rm -r {data_dir}/9850858*')
 
 #%%
-data = load_band_structure_data(data_dir, raw_dir, data_file)
-data_dict = generate_gamma_data_dict(data_dir, run_name, data, r_max, vn_an)
+data = load_band_structure_data(data_dir, raw_dir, data_file)#.iloc[:500]
+data_dict = generate_data_dict(data_dir=data_dir, run_name=run_name, data=data, r_max=r_max, descriptor=descriptor, option=option, factor=factor, vn_elem=vn_elem)
+
 #%%
 num = len(data_dict)
 tr_nums = [int((num * tr_ratio)//k_fold)] * k_fold
 te_num = num - sum(tr_nums)
-idx_tr, idx_te = train_test_split(range(num), test_size=te_num, random_state=seed)
+idx_tr, idx_te = train_test_split(range(num), test_size=te_num, random_state=seedn)
 with open(f'./data/idx_{run_name}_tr.txt', 'w') as f: 
     for idx in idx_tr: f.write(f"{idx}\n")
 with open(f'./data/idx_{run_name}_te.txt', 'w') as f: 
     for idx in idx_te: f.write(f"{idx}\n")
+
 #%%
 data_set = torch.utils.data.Subset(list(data_dict.values()), range(len(data_dict)))
 tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Subset(data_set, idx_te)
+
 #%%
 ##########################
 
@@ -138,7 +113,7 @@ tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Sub
 
 ##########################
 
-model = GraphNetwork_VVN(mul,
+model = GraphNetwork_VVN(mul,   #TODO: use 'option' inside or outside the function to select the data
                      irreps_out,
                      lmax,
                      nlayers,
@@ -150,6 +125,7 @@ model = GraphNetwork_VVN(mul,
                      input_dim,
                      input_embed_dim)
 print(model)
+
 #%%
 opt = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay = weight_decay)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
@@ -161,7 +137,7 @@ scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 
 ##########################
 
-train(model, 
+train(model,
       opt,
       tr_set,
       tr_nums,
@@ -173,7 +149,8 @@ train(model,
       device,
       batch_size,
       k_fold,
-      option=option)
+      option=option,
+      conf_dict=conf_dict)  #!
 
 
-#%%
+# %%

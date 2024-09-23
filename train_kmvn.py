@@ -11,7 +11,8 @@ import os
 from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data   #, load_data
 from utils.utils_data import generate_data_dict
-from utils.utils_model import BandLoss, GraphNetwork, train
+from utils.utils_model import BandLoss, GraphNetwork_kMVN, train
+# from utils.utils_model_early import BandLoss, GraphNetwork_kMVN, train
 from utils.utils_plot import generate_dafaframe, plot_bands, plot_element_count_stack
 from utils.helpers import make_dict
 torch.set_default_dtype(torch.float64)
@@ -88,7 +89,7 @@ if download_data:
 
 #%%
 data = load_band_structure_data(data_dir, raw_dir, data_file)
-data_dict = generate_data_dict(data_dir, run_name, data, r_max, descriptor=descriptor, option=option, factor=factor)
+data_dict = generate_data_dict(data_dir=data_dir, run_name=run_name, data=data, r_max=r_max, descriptor=descriptor, option=option, factor=factor)
 
 #%%
 num = len(data_dict)
@@ -111,7 +112,7 @@ tr_set, te_set = torch.utils.data.Subset(data_set, idx_tr), torch.utils.data.Sub
 
 ##########################
 
-model = GraphNetwork(mul,   #TODO: use 'option' inside or outside the function to select the data
+model = GraphNetwork_kMVN(mul,   #TODO: use 'option' inside or outside the function to select the data
                      irreps_out,
                      lmax,
                      nlayers,
@@ -136,16 +137,17 @@ scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma = schedule_gamma)
 ##########################
 
 train(model,
-      opt,
-      tr_set,
-      tr_nums,
-      te_set,
-      loss_fn,
-      run_name,
-      max_iter,
-      scheduler,
-      device,
-      batch_size,
-      k_fold,
-      option=option)
+    opt,
+    tr_set,
+    tr_nums,
+    te_set,
+    loss_fn,
+    run_name,
+    max_iter,
+    scheduler,
+    device,
+    batch_size,
+    k_fold,
+    option=option,
+    conf_dict=conf_dict)  #!
 

@@ -199,7 +199,7 @@ def append_diag_vvn(structure, element="Fe"):
         structure_vvn.append(Atom(element, (vec[0], vec[1], vec[2])))
     return structure_vvn
 
-def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem='Fe'):
+def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vn_elem='Fe'):
     """
     Create virtual nodes for the 'vvn' method.
     Args:
@@ -207,11 +207,11 @@ def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem='
         edge_src (np.ndarray): Source edges.
         edge_dst (np.ndarray): Destination edges.
         edge_shift (np.ndarray): Edge shifts.
-        vnelem (str, optional): Element type for virtual nodes. Defaults to 'Fe'.
+        vn_elem (str, optional): Element type for virtual nodes. Defaults to 'Fe'.
     Returns:
         tuple: Updated edges, shifts, vectors, lengths, and virtual node structure.
     """
-    structure_vvn = append_diag_vvn(structure, element=vnelem)
+    structure_vvn = append_diag_vvn(structure, element=vn_elem)
     positions_vvn = torch.from_numpy(structure_vvn.get_positions().copy())
     positions = torch.from_numpy(structure.get_positions().copy())
     numb = len(positions)
@@ -250,7 +250,7 @@ def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem='
 # def get_node_feature_vvn(atomic_numbers, descriptor='mass'):  #TODO: delete later
 
 
-def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='kmvn', factor=1000, **kwargs):
+def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='kmvn', factor=1000, vn_elem='Fe', **kwargs):
     """
     Build data object for graph-based learning models.
     Args:
@@ -262,6 +262,7 @@ def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='km
         descriptor (str, optional): Descriptor for node features. Defaults to 'mass'.
         option (str, optional): Option for virtual node creation. Defaults to 'kmvn'.
         factor (int, optional): Scaling factor for real values. Defaults to 1000.
+        vn_elem (str, optional): Element type for virtual nodes. only for VVN. Defaults to 'Fe'.
     Returns:
         torch_geometric.data.Data: Data object for PyTorch Geometric.
     """
@@ -272,8 +273,7 @@ def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='km
     edge_src, edge_dst, edge_shift, edge_vec, edge_len = neighbor_list("ijSDd", a = structure, cutoff = r_max, self_interaction = True)
     ucs = None
     if option == 'vvn':
-        vnelem = kwargs['vnelem']   #TODO: check if this line is correct. 
-        edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure_vn = create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vnelem)
+        edge_src, edge_dst, edge_shift, edge_vec, edge_len, structure = create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vn_elem)
         len_usc = None
     else: 
         if option == 'kmvn':
@@ -297,7 +297,7 @@ def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='km
     data = Data(**data_dict)
     return data
 
-def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, **kwargs):
+def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, vn_elem='Fe', **kwargs):
     """
     Generate a dictionary of band structure data.
     Args:
@@ -308,6 +308,7 @@ def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', optio
         descriptor (str, optional): Descriptor for node features. Defaults to 'mass'.
         option (str, optional): Option for virtual node creation. Defaults to 'kmvn'.
         factor (int, optional): Scaling factor for real values. Defaults to 1000.
+        vn_elem (str): Element type for virtual nodes (only for VVN). Defaults to 'Fe'.
     Returns:
         dict: Data dictionary containing band structure information.
     """
@@ -324,7 +325,7 @@ def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', optio
                 gamma_idx = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
                 real = real[gamma_idx]
                 qpts = qpts[gamma_idx]
-            data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, **kwargs)
+            data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, vn_elem, **kwargs)
         # pkl.dump(data_dict, open(data_dict_path, 'wb'))
     else:
         data_dict  = pkl.load(open(data_dict_path, 'rb'))

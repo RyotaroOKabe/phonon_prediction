@@ -50,7 +50,9 @@ Train the $k$-MVN for phonon band structure prediction.
 $ python train_kmvn.py    
 
 ```
-Run the code `kMVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.     
+
+## Run tutorial on Jupyter noteboook   
+You can run the tutorial code `kMVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.     
 
 
 ## References

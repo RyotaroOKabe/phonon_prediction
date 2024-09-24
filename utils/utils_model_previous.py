@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 import time
-from utils.utils_plot import generate_dafaframe, plot_bands, plot_gphonons
+from utils.utils_plot import generate_dataframe, plot_bands, plot_gphonons
 torch.autograd.set_detect_anomaly(True)
 
 class BandLoss(_Loss):
@@ -569,8 +569,8 @@ def train(model,
             record_lines.append(record_line)
             loss_plot('./models/' + run_name, device, './models/' + run_name)
             loss_test_plot(model, device, './models/' + run_name, te_loader, loss_fn, option)
-            df_tr = generate_dafaframe(model, tr_loader, loss_fn, device, option)
-            df_te = generate_dafaframe(model, te_loader, loss_fn, device, option)
+            df_tr = generate_dataframe(model, tr_loader, loss_fn, device, option)
+            df_te = generate_dataframe(model, te_loader, loss_fn, device, option)
             palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
             if option == 'kmvn':
                 plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)

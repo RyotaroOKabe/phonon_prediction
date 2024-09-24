@@ -1,61 +1,107 @@
 # Virtual Node Graph Neural Network for Full Phonon Prediction
-We present the virtual node graph neural network (VGNN) to address the challenges in phonon prediction. 
+
+This repository provides the implementation of the Virtual Node Graph Neural Network (VGNN) for full phonon prediction in materials science. VGNN is designed to address the challenges in phonon prediction using graph neural networks.
 
 <p align="center">
   <img src="assets/vgnn.png" width="500">
 </p>
 
-## [1] Set up env   
-To work from a local copy of the code:
+## Table of Contents
+1. [Environment Setup](#environment-setup)
+2. [Tutorial](#tutorial)
+3. [Using Pre-trained Models](#using-pre-trained-models)
+4. [Training the Model](#training-the-model)
+5. [Citation](#citation)
+6. [References](#references)
+7. [Data Availability](#data-availability)
+
+---
+
+## 1. Environment Setup
+
+To set up the environment locally and run the code:
 
 1. Clone the repository:
-	> `git clone https://github.com/RyotaroOKabe/phonon_prediction.git`
+	```bash
+	git clone https://github.com/RyotaroOKabe/phonon_prediction.git
+	cd phonon_prediction_
+	```
 
-	> `cd phonon_prediction_`
+2. Create a virtual environment:
+	```bash
+	conda create -n pdos python=3.9
+	conda activate pdos
+	```
 
-2. Create a virtual environment for the project:
-	> `conda create -n pdos python=3.9`
+3. Install the required dependencies:
+	```bash
+	pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+	```
+	Replace `${TORCH}` and `${CUDA}` with your specific versions (e.g., `cpu`, `cu118` for CUDA 11.8, and `2.0.0` for PyTorch 2.0). For example:
+	```bash
+	pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-2.0.0+cu118.html
+	```
 
-	> `conda activate pdos`
+4. Start Jupyter Notebook and open the notebooks:
+	```bash
+	jupyter notebook
+	```
+	Open either `VVN.ipynb` or `kMVN.ipynb`.
 
-3. Install all necessary packages:
-	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html`
+---
 
-	where `${TORCH}` and `${CUDA}` should be replaced by the specific CUDA version (e.g. `cpu`, `cu118`) and PyTorch version (e.g. `2.0.0`), respectively. For example:
+## 2. Tutorial
 
-	> `pip install -r requirements.txt -f https://pytorch-geometric.com/whl/torch-2.0.0+cu118.html`
+You can follow the tutorial by running the provided Jupyter notebooks:
 
-4. Run `jupyter notebook` and open `VVN.ipynb` or `kMVN.ipynb`.
+- `tutorial_VVN.ipynb`
+- `tutorial_MVN.ipynb`
+- `tutorial_kMVN.ipynb`
 
-## [2] Tutorial   
-You can go through the tutorial by rynning Jupyter notebooks: , `tutorial_VVN.ipynb`, `tutorial_MVN.ipynb`, `tutorial_kMVN.ipynb`. If you want to use the model you trained from scratch (see the section [4] below), Please specify `pretrained_name` in the codes.   
-* The tutorial codes of the previous version (uses the code and model for generating figures on our manuscript) are stored in the folder `./previous_codes/`. You can move the files to the parent directory and run the jupyter notebooks `tutorial_XXX_previous.ipynb`.   
+To use a trained model from scratch, specify the `pretrained_name` in the code.
 
-## [2] Use the pre-trained models to run phonon prediction of your target materials   
-We provide the Jupyter notebooks to run phonon prediction of the materials you have: , `cif_VVN.ipynb`, `cif_MVN.ipynb`, `cif_kMVN.ipynb`. 
-Please store your CIF files in the folder `./cif_folder/`. The Jupyter notebooks load materials in the folder and run prediction. You need to set `idx_out`, to specify which material to plot the result. 
+Note: Tutorial codes from a previous version are stored in the `./previous_codes/` folder. To run them, move the files to the parent directory and use `tutorial_XXX_previous.ipynb`.
 
-## [4] Train the model
-If you want to train the model fro scratch, Ruh the training codes.         
-```
-$ python train_vvn.py    
-```
-Train the MVN for Gamma phonon prediction.       
-```
-$ python train_mvn.py    
+---
 
-```
-Train the $k$-MVN for phonon band structure prediction.   
-```
-$ python train_kmvn.py    
+## 3. Using Pre-trained Models
 
-```
-  
+To run phonon predictions on your own materials using the pre-trained models, use these notebooks:
 
-## Citation   
-Please consider citing the following paper if you find our code & data useful.   
+- `cif_VVN.ipynb`
+- `cif_MVN.ipynb`
+- `cif_kMVN.ipynb`
 
-```
+Store your CIF files in the `./cif_folder/`. The Jupyter notebooks will load the materials from this folder and perform the prediction. Use the `idx_out` variable to specify which material to plot the results for.
+
+---
+
+## 4. Training the Model
+
+To train the models from scratch, use the following commands:
+
+- Train the VVN model:
+	```bash
+	python train_vvn.py
+	```
+
+- Train the MVN model for Gamma phonon prediction:
+	```bash
+	python train_mvn.py
+	```
+
+- Train the k-MVN model for phonon band structure prediction:
+	```bash
+	python train_kmvn.py
+	```
+
+---
+
+## 5. Citation
+
+If you find this code or dataset useful, please cite the following paper:
+
+```bibtex
 @article{okabe2024virtual,
   title={Virtual node graph neural network for full phonon prediction},
   author={Okabe, Ryotaro and Chotrattanapituk, Abhijatmedhi and Boonkird, Artittaya and Andrejevic, Nina and Fu, Xiang and Jaakkola, Tommi S and Song, Qichen and Nguyen, Thanh and Drucker, Nathan and Mu, Sai and others},
@@ -64,9 +110,10 @@ Please consider citing the following paper if you find our code & data useful.
   year={2024},
   publisher={Nature Publishing Group US New York}
 }
+
 ```
 
-## References
+## [6] References
 **Publication:** Zhantao Chen, Nina Andrejevic, *et al.* "Virtual Node Graph Neural Network for Full Phonon
 Prediction." Adv. Sci. 8, 2004214 (2021). https://onlinelibrary.wiley.com/doi/10.1002/advs.202004214.    
 
@@ -74,6 +121,5 @@ Prediction." Adv. Sci. 8, 2004214 (2021). https://onlinelibrary.wiley.com/doi/10
 
 **Dataset:** Guido Petretto, Shyam Dwaraknath, Henrique P. C. Miranda, Donald Winston, *et al.* "High-throughput Density-Functional Perturbation Theory phonons for inorganic materials." (2018) figshare. Collection. https://doi.org/10.6084/m9.figshare.c.3938023.v1
 
-### Data Availability Statement
-The data that support the findings of this study are openly available in GitHub at https://github.com/RyotaroOKabe/phonon_prediction. The $\Gamma$-phonon database generated with the MVN method is available at https://osf.io/k5utb/ 
-
+## [7] Data Availability Statement
+The data that support the findings of this study are openly available in GitHub at https://github.com/RyotaroOKabe/phonon_prediction. The $\Gamma$-phonon database generated with the MVN method is available at https://osf.io/k5utb/

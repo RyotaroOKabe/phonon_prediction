@@ -297,12 +297,10 @@ def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='km
     data = Data(**data_dict)
     return data
 
-def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', option='kmvn', factor=1000, vn_elem='Fe', **kwargs):
+def generate_data_dict(data, r_max, descriptor='mass', option='kmvn', factor=1000, vn_elem='Fe', **kwargs):
     """
     Generate a dictionary of band structure data.
     Args:
-        data_dir (str): Directory to store the data.
-        run_name (str): Name of the run.
         data (dict): Dictionary containing data to process.
         r_max (float): Cutoff radius for neighbor list.
         descriptor (str, optional): Descriptor for node features. Defaults to 'mass'.
@@ -312,21 +310,21 @@ def generate_data_dict(data_dir, run_name, data, r_max, descriptor='mass', optio
     Returns:
         dict: Data dictionary containing band structure information.
     """
-    data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
-    if len(glob.glob(data_dict_path)) == 0: 
-        data_dict = dict()
-        ids = data['id']
-        structures = data['structure']
-        qptss = data['qpts']
-        reals = data['real_band']  # data['band_structure']
-        for id, structure, real, qpts in tqdm(zip(ids, structures, reals, qptss), total = len(ids)):
-            # print(id)
-            if option in ['vvn', 'mvn']:
-                gamma_idx = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
-                real = real[gamma_idx]
-                qpts = qpts[gamma_idx]
-            data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, vn_elem, **kwargs)
-        # pkl.dump(data_dict, open(data_dict_path, 'wb'))
-    else:
-        data_dict  = pkl.load(open(data_dict_path, 'rb'))
+    # data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
+    # if len(glob.glob(data_dict_path)) == 0: 
+    data_dict = dict()
+    ids = data['id']
+    structures = data['structure']
+    qptss = data['qpts']
+    reals = data['real_band']  # data['band_structure']
+    for id, structure, real, qpts in tqdm(zip(ids, structures, reals, qptss), total = len(ids)):
+        # print(id)
+        if option in ['vvn', 'mvn']:
+            gamma_idx = np.argmin(np.abs(np.linalg.norm(qpts - np.array([0, 0, 0]), axis = 1)), axis = 0)
+            real = real[gamma_idx]
+            qpts = qpts[gamma_idx]
+        data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, vn_elem, **kwargs)
+    # pkl.dump(data_dict, open(data_dict_path, 'wb'))
+    # else:
+    #     data_dict  = pkl.load(open(data_dict_path, 'rb'))
     return data_dict

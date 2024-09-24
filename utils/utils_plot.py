@@ -195,11 +195,15 @@ def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor
                 else:
                     output = model(d)
                 run_time = time.time() - start_time
-                loss = loss_fn(output, d.y).cpu()
+                if loss_fn is not None:
+                    loss = loss_fn(output, d.y).cpu().item()
+                else: 
+                    loss = 0
 
                 real = d.y.cpu().numpy() * factor
                 pred = output.cpu().numpy() * factor
-                rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
+                # rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
+                rrr = {'id': d.id, 'name': d.symbol, 'loss': loss, 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
                 df0 = pd.DataFrame(data = rrr)
                 df = pd.concat([df, df0], ignore_index=True)
             except Exception as e:
@@ -284,11 +288,17 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
     print(id_list)
 
 # Specific plotting functions for bands and phonons
-def plot_band(ax, real, pred, color, lwidth, plot_real=True):
+def plot_band(ax, real, pred, color, lwidth, qticks=None, plot_real=True):
     xpts = pred.shape[0]
     if plot_real and real is not None:
         ax.plot(range(xpts), real, color='k', linewidth=lwidth * 0.8)
     ax.plot(range(xpts), pred, color=color, linewidth=lwidth)
+    if qticks is not None:
+        ax.set_xticks(range(xpts))
+        # ax.set_xticklabels(qticks, fontsize=10)
+        qticks = [f"${txt}$" if not '$' in txt and len(txt) > 0 else txt for txt in qticks]
+        ax.set_xticklabels(qticks, fontsize=10)
+        ax.tick_params(axis='x', which='both', bottom=False, top=False)
 
 def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True):
     min_x, max_x = 1.5, 2.5
@@ -296,7 +306,7 @@ def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True):
         real = real.reshape(-1)
         min_x = 0.2
     pred = pred.reshape(-1)
-    for j in range(real.shape[0]):
+    for j in range(pred.shape[0]):
         if plot_real and real is not None:
             ax.hlines(real[j], 0.2, 1.2, color='k', linewidth=lwidth * 0.6)
         ax.hlines(pred[j], 1.5, 2.5, color=color, linewidth=lwidth)

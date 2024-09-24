@@ -14,6 +14,7 @@ import time
 from tqdm import tqdm
 palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
 save_extension = 'pdf'
+seedn = 42
 
 chemical_symbols = [
 
@@ -212,7 +213,7 @@ def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor
     return df
 
 
-def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_func=None, plot_real=True, save_lossx=False):
+def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_func=None, plot_real=True, save_lossx=False, seed=seedn):
     """
     General function to plot data (bands, phonons, etc.)
     
@@ -229,6 +230,9 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
         plot_func (function): A custom plotting function that plots the specific type of data (bands, phonons, etc.).
         save_lossx (bool, optional): Whether to save the loss distribution plot on the x-axis. Defaults to False.
     """
+    if seed is not None:
+        np.random.seed(seed)  # Set the random seed if provided
+    
     fontsize = 10
     i_mse = np.argsort(df_in['loss'])
     ds = df_in.iloc[i_mse][['id', 'name', 'real', 'pred', 'loss']].reset_index(drop=True)
@@ -319,11 +323,11 @@ def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True, ylabel=False):
         ax.set_ylabel(r'$\omega\ (\mathrm{cm}^{-1})$')  # Set y-axis label with LaTeX formatting for cm^-1
 
 # Now, you can use `plot_general` for both bands and phonons
-def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False):
-    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx)
+def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
+    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
-def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, plot_real=True, save_lossx=False):
-    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx)
+def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
+    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
 
 def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2'), size=5, lw=3, r2=False):

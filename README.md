@@ -5,7 +5,7 @@ We present the virtual node graph neural network (VGNN) to address the challenge
   <img src="assets/vgnn.png" width="500">
 </p>
 
-## Work from a local installation
+## [1] Set up env   
 To work from a local copy of the code:
 
 1. Clone the repository:
@@ -27,37 +27,48 @@ To work from a local copy of the code:
 
 4. Run `jupyter notebook` and open `VVN.ipynb` or `kMVN.ipynb`.
 
-## Vector Virtual Nodes (VVN)
-Train the VVN for Gamma phonon prediction.    
+## [2] Tutorial   
+You can go through the tutorial by rynning Jupyter notebooks: , `tutorial_VVN.ipynb`, `tutorial_MVN.ipynb`, `tutorial_kMVN.ipynb`. If you want to use the model you trained from scratch (see the section [4] below), Please specify `pretrained_name` in the codes.   
+* The tutorial codes of the previous version (uses the code and model for generating figures on our manuscript) are stored in the folder `./previous_codes/`. You can move the files to the parent directory and run the jupyter notebooks `tutorial_XXX_previous.ipynb`.   
+
+## [2] Use the pre-trained models to run phonon prediction of your target materials   
+We provide the Jupyter notebooks to run phonon prediction of the materials you have: , `cif_VVN.ipynb`, `cif_MVN.ipynb`, `cif_kMVN.ipynb`. 
+Please store your CIF files in the folder `./cif_folder/`. The Jupyter notebooks load materials in the folder and run prediction. You need to set `idx_out`, to specify which material to plot the result. 
+
+## [4] Train the model
+If you want to train the model fro scratch, Ruh the training codes.         
 ```
 $ python train_vvn.py    
-
 ```
-Run the code `VVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
-
-## Matrix Virtual Nodes (MVN)
-Train the MVN for Gamma phonon prediction.    
+Train the MVN for Gamma phonon prediction.       
 ```
 $ python train_mvn.py    
 
 ```
-Run the code `MVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.      
-
-
-## Momentum-dependent Matrix Virtual Nodes ($k$-MVN)
-Train the $k$-MVN for phonon band structure prediction.
+Train the $k$-MVN for phonon band structure prediction.   
 ```
 $ python train_kmvn.py    
 
 ```
+  
 
-## Run tutorial on Jupyter noteboook   
-You can run the tutorial code `kMVN.ipynb` for inferencing, by setting the pretrained model name as `pretrained_name`.     
+## Citation   
+Please consider citing the following paper if you find our code & data useful.   
 
+```
+@article{okabe2024virtual,
+  title={Virtual node graph neural network for full phonon prediction},
+  author={Okabe, Ryotaro and Chotrattanapituk, Abhijatmedhi and Boonkird, Artittaya and Andrejevic, Nina and Fu, Xiang and Jaakkola, Tommi S and Song, Qichen and Nguyen, Thanh and Drucker, Nathan and Mu, Sai and others},
+  journal={Nature Computational Science},
+  pages={1--10},
+  year={2024},
+  publisher={Nature Publishing Group US New York}
+}
+```
 
 ## References
-**Publication:** Zhantao Chen, Nina Andrejevic, Tess Smidt, *et al.* "Virtual Node Graph Neural Network for Full Phonon
-Prediction." Journal. (2023): XXXX. "URL".
+**Publication:** Zhantao Chen, Nina Andrejevic, *et al.* "Virtual Node Graph Neural Network for Full Phonon
+Prediction." Adv. Sci. 8, 2004214 (2021). https://onlinelibrary.wiley.com/doi/10.1002/advs.202004214.    
 
 **E(3)NN:** Mario Geiger, Tess Smidt, Alby M., Benjamin Kurt Miller, *et al.* Euclidean neural networks: e3nn (2020) v0.4.2. https://doi.org/10.5281/zenodo.5292912.
 

@@ -288,7 +288,7 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
     print(id_list)
 
 # Specific plotting functions for bands and phonons
-def plot_band(ax, real, pred, color, lwidth, qticks=None, plot_real=True):
+def plot_band(ax, real, pred, color, lwidth, qticks=None, plot_real=True, ylabel=False):
     xpts = pred.shape[0]
     if plot_real and real is not None:
         ax.plot(range(xpts), real, color='k', linewidth=lwidth * 0.8)
@@ -299,8 +299,10 @@ def plot_band(ax, real, pred, color, lwidth, qticks=None, plot_real=True):
         qticks = [f"${txt}$" if not '$' in txt and len(txt) > 0 else txt for txt in qticks]
         ax.set_xticklabels(qticks, fontsize=10)
         ax.tick_params(axis='x', which='both', bottom=False, top=False)
+    if ylabel:
+        ax.set_ylabel(r'$\omega\ (\mathrm{cm}^{-1})$')  # Set y-axis label with LaTeX formatting for cm^-1
 
-def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True):
+def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True, ylabel=False):
     min_x, max_x = 1.5, 2.5
     if plot_real and real is not None:
         real = real.reshape(-1)
@@ -312,6 +314,9 @@ def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True):
         ax.hlines(pred[j], 1.5, 2.5, color=color, linewidth=lwidth)
     width_x = max_x - min_x
     ax.set_xlim(min_x-0.05*width_x, max_x+0.05*width_x)
+    ax.set_xticks([])
+    if ylabel:
+        ax.set_ylabel(r'$\omega\ (\mathrm{cm}^{-1})$')  # Set y-axis label with LaTeX formatting for cm^-1
 
 # Now, you can use `plot_general` for both bands and phonons
 def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False):

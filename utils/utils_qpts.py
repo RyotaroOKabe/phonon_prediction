@@ -23,7 +23,7 @@ def symbol_latex(symbol):
     return f'\{symbol.capitalize()}' if symbol.split('_')[0].capitalize() in Greek_letters else symbol
 
 
-def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0, nongamma=False):
+def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0):
     """
     Computes the high-symmetry k-point path and q-points for a given structure.
     Args:

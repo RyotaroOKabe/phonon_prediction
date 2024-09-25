@@ -11,7 +11,7 @@ This repository provides the implementation of the Virtual Node Graph Neural Net
 2. [Tutorial](#tutorial)
 3. [Using Pre-trained Models](#using-pre-trained-models)
 4. [Training the Model](#training-the-model)
-5. [Citation](#citation)
+5. [Publications](#publications)
 6. [References](#references)
 7. [Data Availability](#data-availability)
 
@@ -96,7 +96,20 @@ To train the models from scratch, use the following commands:
 
 ---
 
-## 5. Citation
+
+## 5. Publications
+
+### Main Publication
+- **Virtual Node Graph Neural Network for Full Phonon Prediction**  
+  *Nature Computational Science* (2024)  
+  [Read the full paper](https://www.nature.com/articles/s43588-024-00661-0)
+
+### Research Briefing
+- **Research Briefing: Virtual Node Graph Neural Network for Full Phonon Prediction**  
+  *Nature Computational Science* (2024)  
+  [Read the research briefing](https://www.nature.com/articles/s43588-024-00665-w)
+
+---
 
 If you find this code or dataset useful, please cite the following paper:
 

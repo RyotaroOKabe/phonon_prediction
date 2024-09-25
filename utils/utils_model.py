@@ -533,12 +533,12 @@ def train(model,
             df_tr = generate_dataframe(model, tr_loader, loss_fn, device, option, factor)
             df_te = generate_dataframe(model, te_loader, loss_fn, device, option, factor)
             if option == 'kmvn':
-                plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette, seed=seedn)
-                plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette, seed=seedn)
+                fig_tr = plot_bands(df_tr, header=save_name, title='train', n=6, m=2, palette=palette, formula=True, seed=seedn)
+                fig_te = plot_bands(df_te, header=save_name, title='test', n=6, m=2, palette=palette, formula=True, seed=seedn)
             elif option in ['mvn', 'vvn']:
-                plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
-                plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
-        text_file = open('./models/' + run_name + ".txt", "w")
+                fig_tr = plot_gphonons(df_tr, header=save_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, seed=seedn)
+                fig_te = plot_gphonons(df_te, header=save_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, seed=seedn)
+        text_file = open(save_name + ".txt", "w")
         for line in record_lines:
             text_file.write(line + "\n")
         text_file.close()

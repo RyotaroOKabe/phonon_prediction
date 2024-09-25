@@ -47,7 +47,7 @@ def save_figure(fig, filename, title=None):
     if title:
         fig.suptitle(title, ha='center', y=1., fontsize=16)
     fig.tight_layout()
-    fig.subplots_adjust(hspace=0.6) #!
+    fig.subplots_adjust(hspace=0.6) 
     fig.savefig(f"{filename}.{save_extension}")
     # plt.close(fig)
 
@@ -290,6 +290,7 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
 
     save_figure(fig, f"{header}_{title}", title=title)
     print(id_list)
+    return fig
 
 # Specific plotting functions for bands and phonons
 def plot_band(ax, real, pred, color, lwidth, qticks=None, plot_real=True, ylabel=False):
@@ -324,10 +325,10 @@ def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True, ylabel=False):
 
 # Now, you can use `plot_general` for both bands and phonons
 def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
-    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
+    return plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
-    plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
+    return plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
 
 def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2'), size=5, lw=3, r2=False):

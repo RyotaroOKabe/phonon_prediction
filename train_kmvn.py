@@ -6,7 +6,6 @@
 ##########################
 import torch
 import time
-import pickle as pkl
 import os
 from sklearn.model_selection import train_test_split
 from utils.utils_load import load_band_structure_data   #, load_data
@@ -19,8 +18,6 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 seedn=42
-palette = ['#43AA8B', '#F8961E', '#F94144']
-sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 #%%
 ##########################
@@ -52,8 +49,8 @@ node_dim = 118
 node_embed_dim = 32 
 input_dim = 118
 input_embed_dim = 32 
-irreps_out = '2x0e+2x1e+2x2e'
 option = 'kmvn'
+irreps_out = '2x0e+2x1e+2x2e'
 descriptor = 'mass'
 factor = 1000
 
@@ -64,7 +61,7 @@ schedule_gamma = 0.96
 
 conf_dict = make_dict([run_name, model_dir, data_dir, raw_dir, data_file, tr_ratio, batch_size, k_fold, 
                        max_iter, lmax, mul, nlayers, r_max, number_of_basis, radial_layers, radial_neurons, 
-                       node_dim, node_embed_dim, input_dim, input_embed_dim, irreps_out, option, 
+                       node_dim, node_embed_dim, input_dim, input_embed_dim, irreps_out, option, factor, descriptor, 
                        loss_fn, lr, weight_decay, schedule_gamma, device, seedn])
 
 for k, v in conf_dict.items():

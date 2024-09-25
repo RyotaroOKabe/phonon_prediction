@@ -46,7 +46,6 @@ To set up the environment locally and run the code:
 	```bash
 	jupyter notebook
 	```
-	Open either `VVN.ipynb` or `kMVN.ipynb`.
 
 ---
 

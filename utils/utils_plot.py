@@ -415,10 +415,8 @@ def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2')
 
 def get_element_statistics(data_set):
     """get the element statistics of the dataset
-
     Args:
         data_set (torch.utils.data.dataset.Subset): tr_set or te_set
-
     Returns:
         pandas.core.frame.DataFrame: Dataframe of the counts on how many mterials have each elememnt.
     """
@@ -440,7 +438,6 @@ def get_element_statistics(data_set):
 def plot_element_count_stack(data_set1, data_set2, header=None, title=None, bar_colors=['#90BE6D', '#277DA1'], save_fig=False):
     """
     Get the element statistics for two datasets and plot the stacked bar chart.
-
     Args:
         data_set1, data_set2 (torch.utils.data.dataset.Subset): Two datasets (e.g., training and test sets).
         header (str): Header for saving the plot.

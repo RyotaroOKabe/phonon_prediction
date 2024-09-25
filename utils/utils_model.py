@@ -12,6 +12,8 @@ import math
 import time
 from utils.utils_plot import generate_dataframe, plot_bands, plot_gphonons, plot_loss, plot_test_loss
 torch.autograd.set_detect_anomaly(True)
+palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
+seedn = 42
 
 class BandLoss(_Loss):
     """
@@ -530,10 +532,9 @@ def train(model,
 
             df_tr = generate_dataframe(model, tr_loader, loss_fn, device, option, factor)
             df_te = generate_dataframe(model, te_loader, loss_fn, device, option, factor)
-            palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
             if option == 'kmvn':
-                plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette)
-                plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette)
+                plot_bands(df_tr, header='./models/' + run_name, title='train', n=6, m=2, palette=palette, seed=seedn)
+                plot_bands(df_te, header='./models/' + run_name, title='test', n=6, m=2, palette=palette, seed=seedn)
             elif option in ['mvn', 'vvn']:
                 plot_gphonons(df_tr, header='./models/' + run_name, title='train', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)
                 plot_gphonons(df_te, header='./models/' + run_name, title='test', n=6, m=2, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True)

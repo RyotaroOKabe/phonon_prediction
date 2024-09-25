@@ -123,9 +123,6 @@ def get_node_deg(edge_dst, n):
     return torch.from_numpy(node_deg)
 
 
-# def get_node_attr(atomic_numbers, n): #TODO: delete later
-
-
 def atom_feature(atomic_number: int, descriptor):
     """
     Get atomic features based on the descriptor.
@@ -152,10 +149,6 @@ def atom_feature(atomic_number: int, descriptor):
         else:   # no feature
             feature = 1
     return feature
-
-
-# def get_input(atomic_numbers, n, descriptor='mass'):  #TODO delete later
-
 
 def create_node_input(atomic_numbers, n=None, descriptor='mass', option='kmvn'):
     """
@@ -219,35 +212,16 @@ def create_virtual_nodes_vvn(structure, edge_src, edge_dst, edge_shift, vn_elem=
     idx_real, idx_virt = range(numb), range(numb, 4*numb)
     rv_pairs = list(itertools.product(idx_real, idx_virt))
     vv_pairs = list(itertools.product(idx_virt, idx_virt))
-    # edge_src_vvn = copy(edge_src)
-    # edge_dst_vvn = copy(edge_dst)
-    # edge_shift_vvn = copy(edge_shift)
     
     edge_src_vvn = np.append(edge_src, [pair[0] for pair in rv_pairs + vv_pairs])
     edge_dst_vvn = np.append(edge_dst, [pair[1] for pair in rv_pairs + vv_pairs])
     edge_shift_vvn = np.concatenate([edge_shift, np.zeros((len(rv_pairs) + len(vv_pairs), 3))])
     
-    # for i in range(len(rv_pairs)):
-    #     edge_src_vvn = np.append(edge_src_vvn, np.array([rv_pairs[i][0]]))
-    #     edge_dst_vvn = np.append(edge_dst_vvn, np.array([rv_pairs[i][1]]))
-    #     edge_shift_vvn = np.concatenate((edge_shift_vvn, np.array([[0, 0, 0]])), axis=0)
-    # for j in range(len(vv_pairs)):
-    #     edge_src_vvn = np.append(edge_src_vvn, np.array([vv_pairs[j][0]]))
-    #     edge_dst_vvn = np.append(edge_dst_vvn, np.array([vv_pairs[j][1]]))
-    #     edge_shift_vvn = np.concatenate((edge_shift_vvn, np.array([[0, 0, 0]])), axis=0)
-    
-    # edge_batch = positions_vvn.new_zeros(positions_vvn.shape[0], dtype=torch.long)[torch.from_numpy(edge_src_vvn)]   #TODO: check the code line
-    # edge_vec_vvn = (positions_vvn[torch.from_numpy(edge_dst_vvn)]
-    #             - positions_vvn[torch.from_numpy(edge_src_vvn)]
-    #             + torch.einsum('ni,nij->nj', torch.tensor(edge_shift_vvn, dtype=default_dtype), lattice_vvn[edge_batch]))   #TODO: check the code line
     edge_vec_vvn = (positions_vvn[torch.from_numpy(edge_dst_vvn)]
                     - positions_vvn[torch.from_numpy(edge_src_vvn)]
                     + torch.einsum('ni,nij->nj', torch.tensor(edge_shift_vvn, dtype=default_dtype), lattice_vvn))
     edge_len_vvn = np.around(edge_vec_vvn.norm(dim=1).numpy(), decimals=2)
     return edge_src_vvn, edge_dst_vvn, edge_shift_vvn, edge_vec_vvn, edge_len_vvn, structure_vvn
-
-# def get_node_attr_vvn(atomic_numbers):    #TODO: delete later
-# def get_node_feature_vvn(atomic_numbers, descriptor='mass'):  #TODO: delete later
 
 
 def build_data(mpid, structure, real, r_max, qpts, descriptor='mass', option='kmvn', factor=1000, vn_elem='Fe', **kwargs):
@@ -310,13 +284,11 @@ def generate_data_dict(data, r_max, descriptor='mass', option='kmvn', factor=100
     Returns:
         dict: Data dictionary containing band structure information.
     """
-    # data_dict_path = os.path.join(data_dir, f'data_dict_{run_name}.pkl')
-    # if len(glob.glob(data_dict_path)) == 0: 
     data_dict = dict()
     ids = data['id']
     structures = data['structure']
     qptss = data['qpts']
-    reals = data['real_band']  # data['band_structure']
+    reals = data['real_band'] 
     for id, structure, real, qpts in tqdm(zip(ids, structures, reals, qptss), total = len(ids)):
         # print(id)
         if option in ['vvn', 'mvn']:
@@ -324,7 +296,4 @@ def generate_data_dict(data, r_max, descriptor='mass', option='kmvn', factor=100
             real = real[gamma_idx]
             qpts = qpts[gamma_idx]
         data_dict[id] = build_data(id, structure, real, r_max, qpts, descriptor, option, factor, vn_elem, **kwargs)
-    # pkl.dump(data_dict, open(data_dict_path, 'wb'))
-    # else:
-    #     data_dict  = pkl.load(open(data_dict_path, 'rb'))
     return data_dict

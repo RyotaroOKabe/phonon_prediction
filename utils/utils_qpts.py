@@ -5,10 +5,8 @@ Greek_letters = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'T
 def get_structure(astruct):
     """
     Extracts structure data (cell, positions, atomic numbers) from an ASE atoms object.
-    
     Args:
         astruct (ase.Atoms): ASE crystal structure.
-
     Returns:
         tuple: Cell, positions, and atomic numbers.
     """
@@ -17,10 +15,8 @@ def get_structure(astruct):
 def symbol_latex(symbol):
     """
     Converts a chemical symbol to LaTeX format.
-    
     Args:
         symbol (str): Chemical symbol.
-
     Returns:
         str: LaTeX formatted chemical symbol.
     """
@@ -30,7 +26,6 @@ def symbol_latex(symbol):
 def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=-1.0, nongamma=False):
     """
     Computes the high-symmetry k-point path and q-points for a given structure.
-    
     Args:
         astruct (ase.Atoms): ASE crystal structure.
         res (float, optional): Resolution of q-points. Defaults to 0.05.
@@ -38,7 +33,6 @@ def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=
         symprec (float, optional): Symmetry precision. Defaults to 1e-05.
         angle_tolerance (float, optional): Angle tolerance. Defaults to -1.0.
         nongamma (bool, optional): If True, show non-Gamma points. Defaults to False.
-
     Returns:
         dict: Contains symmetry points, paths, q-points, and labels for plotting.
     """
@@ -62,9 +56,7 @@ def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=
     p_end0 = None  # Keeps track of the end point from the previous loop iteration
 
     # Loop through each path segment (start, end) and construct path sets
-    for i, (p_start, p_end) in enumerate(path):
-        # length = len(path_set)
-        
+    for i, (p_start, p_end) in enumerate(path):     
         # Check if the start point of the current path segment is the same as the previous end point
         if p_end0 == p_start: 
             path_set[-1].append(pcoords[p_end])  # Extend the previous path set
@@ -110,12 +102,6 @@ def get_qpts(astruct, res=0.05, threshold=1e-07, symprec=1e-05, angle_tolerance=
                 break
         if high_symmetry == 0:
             qticks.append("")  # If not a high-symmetry point, leave label blank
-    # print('path:', len(path), path)
-    # print('point_list:', len(point_list), point_list)
-    # print('pcoords:', len(pcoords), pcoords)
-    # print('qpts:', len(qpts))
-    # print('qticks:', len(qticks), qticks)
-
 
     return {
         'pcoords': pcoords,

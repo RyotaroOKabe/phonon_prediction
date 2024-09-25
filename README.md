@@ -71,7 +71,7 @@ To run phonon predictions on your own materials using the pre-trained models, us
 - `cif_MVN.ipynb`
 - `cif_kMVN.ipynb`
 
-Store your CIF files in the `./cif_folder/`. The Jupyter notebooks will load the materials from this folder and perform the prediction. Use the `idx_out` variable to specify which material to plot the results for.
+Store your CIF files in the `./cif_folder/`. The Jupyter notebooks will load the materials from this folder and perform the prediction. Seekpath automatically suggest the high-symmetry path for kMVN. Use the `idx_out` variable to specify which material to plot the results for.
 
 ---
 
@@ -113,10 +113,12 @@ If you find this code or dataset useful, please cite the following paper:
 ```
 
 ## [6] References
-**Publication:** Zhantao Chen, Nina Andrejevic, *et al.* "Virtual Node Graph Neural Network for Full Phonon
+**Architecture:** Zhantao Chen, Nina Andrejevic, *et al.* "Virtual Node Graph Neural Network for Full Phonon
 Prediction." Adv. Sci. 8, 2004214 (2021). https://onlinelibrary.wiley.com/doi/10.1002/advs.202004214.    
 
 **E(3)NN:** Mario Geiger, Tess Smidt, Alby M., Benjamin Kurt Miller, *et al.* Euclidean neural networks: e3nn (2020) v0.4.2. https://doi.org/10.5281/zenodo.5292912.
+
+**seekpath:** Y. Hinuma, G. Pizzi, Y. Kumagai, F. Oba, I. Tanaka, Band structure diagram paths based on crystallography, Comp. Mat. Sci. 128, 140 (2017)  https://seekpath.readthedocs.io/en/latest/index.html.   
 
 **Dataset:** Guido Petretto, Shyam Dwaraknath, Henrique P. C. Miranda, Donald Winston, *et al.* "High-throughput Density-Functional Perturbation Theory phonons for inorganic materials." (2018) figshare. Collection. https://doi.org/10.6084/m9.figshare.c.3938023.v1
 

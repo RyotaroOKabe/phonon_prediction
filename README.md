@@ -109,6 +109,11 @@ To train the models from scratch, use the following commands:
   *Nature Computational Science* (2024)  
   [Read the research briefing](https://www.nature.com/articles/s43588-024-00665-w)
 
+### MIT News
+- **AI method radically speeds predictions of materials’ thermal properties**  
+  *Nature Computational Science* (2024)  
+  [Read the MIT News article](https://news.mit.edu/2024/ai-method-radically-speeds-predictions-materials-thermal-properties-0716)
+
 ---
 
 If you find this code or dataset useful, please cite the following paper:

@@ -268,9 +268,9 @@ class BaseGraphNetwork(torch.nn.Module):
         layers = torch.nn.ModuleList()
         irreps_in = self.irreps_in
         for _ in range(nlayers):
-            irreps_scalars = Irreps([(self.mul, ir) for self.mul, ir in self.irreps_hidden if ir.l == 0 and self._tp_path_exists(irreps_in, ir)])
-            irreps_gated = Irreps([(self.mul, ir) for self.mul, ir in self.irreps_hidden if ir.l > 0 and self._tp_path_exists(irreps_in, ir)])
-            ir = "0e" if self._tp_path_exists(irreps_in, "0e") else "0o"
+            irreps_scalars = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l == 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            irreps_gated = Irreps([(mul, ir) for mul, ir in self.irreps_hidden if ir.l > 0 and tp_path_exists(irreps_in, self.irreps_edge_attr, ir)])
+            ir = '0e' if tp_path_exists(irreps_in, self.irreps_edge_attr, '0e') else '0o'
             irreps_gates = Irreps([(self.mul, ir) for self.mul, _ in irreps_gated])
 
             gate = Gate(irreps_scalars, [self.act[ir.p] for _, ir in irreps_scalars],
@@ -282,10 +282,6 @@ class BaseGraphNetwork(torch.nn.Module):
             layers.append(CustomCompose(conv, gate))
         self.irreps_in_fin = irreps_in    
         return layers
-
-    def _tp_path_exists(self, irreps_in, ir):
-        # Placeholder for path existence check
-        return True  # Simplified logic for brevity
 
     def _shared_forward(self, data):
         """

@@ -195,6 +195,7 @@ def plot_general(df_in, header, title=None, n=5, m=1, num=3, lwidth=0.5, windows
     fontsize = 10
     df_sorted = df_in.iloc[np.argsort(df_in['loss'])].reset_index(drop = True)
     tiles = np.arange(1, num + 1)/num
+    # tiles = np.linspace(0, 1, num + 1)[1:-1]
     tile_losses = np.quantile(df_sorted['loss'], tiles)
     idx_q = [0] + [np.argmin(np.abs(df_sorted['loss'] - tile_loss)) for tile_loss in tile_losses]
     replace = True if len(df_sorted) < n * m * num else False
@@ -274,10 +275,16 @@ def plot_gphonon(ax, real, pred, color, lwidth, plot_real=True, ylabel=False):
 
 # Now, you can use `plot_general` for both bands and phonons
 def plot_bands(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
-    return plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_band, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
+    return plot_general(df_in=df_in, header=header, title=title, 
+                        n=n, m=m, num=3, lwidth=lwidth, windowsize=windowsize, 
+                        palette=palette, formula=formula, plot_func=plot_band, 
+                        plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
 def plot_gphonons(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(4, 2), palette=palette, formula=True, plot_real=True, save_lossx=False, seed=seedn):
-    return plot_general(df_in, header, title, n, m, lwidth, windowsize, palette, formula, plot_func=plot_gphonon, plot_real=plot_real, save_lossx=save_lossx, seed=seed)
+    return plot_general(df_in=df_in, header=header, title=title, 
+                        n=n, m=m, num=3, lwidth=lwidth, windowsize=windowsize, 
+                        palette=palette, formula=formula, plot_func=plot_gphonon, 
+                        plot_real=plot_real, save_lossx=save_lossx, seed=seed)
 
 
 def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2'), size=5, lw=3, r2=False):

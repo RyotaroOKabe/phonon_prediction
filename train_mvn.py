@@ -8,16 +8,16 @@ import torch
 import time
 import os
 from sklearn.model_selection import train_test_split
-from utils.utils_load import load_band_structure_data   #, load_data
+from utils.utils_load import load_band_structure_data  
 from utils.utils_data import generate_data_dict
-from utils.utils_model import BandLoss, GraphNetwork_MVN, train
+from utils.utils_model import GraphNetwork_MVN
+from utils.utils_loss import BandLoss
+from utils.utils_train import train
 from utils.helpers import make_dict
+from config_file import seedn
 torch.set_default_dtype(torch.float64)
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
-seedn=42
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# seedn=42
 
 #%%
 ##########################
@@ -55,6 +55,7 @@ descriptor = 'mass'
 factor = 1000
 
 loss_fn = BandLoss()
+loss_fn_name = loss_fn.__class__.__name__
 lr = 0.005
 weight_decay = 0.05 
 schedule_gamma = 0.96 
@@ -62,7 +63,7 @@ schedule_gamma = 0.96
 conf_dict = make_dict([run_name, model_dir, data_dir, raw_dir, data_file, tr_ratio, batch_size, k_fold, 
                        max_iter, lmax, mul, nlayers, r_max, number_of_basis, radial_layers, radial_neurons, 
                        node_dim, node_embed_dim, input_dim, input_embed_dim, irreps_out, option, factor, descriptor,
-                       loss_fn, lr, weight_decay, schedule_gamma, device, seedn])
+                       loss_fn_name, lr, weight_decay, schedule_gamma, device, seedn])
 
 for k, v in conf_dict.items():
     print(f'{k}: {v}')

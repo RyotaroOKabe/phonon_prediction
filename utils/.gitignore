@@ -3,7 +3,6 @@ __pycache__
 utils_model_vvn.py
 utils_data_vvn.py
 archive/
-utils_loss.py
 utils_dos.py
 utils_path.py
 utils_cutfill.py

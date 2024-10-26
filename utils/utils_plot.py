@@ -4,42 +4,16 @@ import numpy as np
 import pandas as pd
 import math
 from scipy.stats import gaussian_kde
-from scipy.optimize import curve_fit
+# from scipy.optimize import curve_fit
 from matplotlib.ticker import FormatStrFormatter
 from ase import Atom
 from copy import copy
-sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 import sklearn
 import time
 from tqdm import tqdm
-palette = ['#43AA8B', '#F8961E', '#F94144', '#277DA1']
-save_extension = 'pdf'
-seedn = 42
-
-chemical_symbols = [
-
-    # 1
-    'H', 'He',
-    # 2
-    'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
-    # 3
-    'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar',
-    # 4
-    'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
-    'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
-    # 5
-    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
-    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe',
-    # 6
-    'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy',
-    'Ho', 'Er', 'Tm', 'Yb', 'Lu',
-    'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
-    'Po', 'At', 'Rn',
-    # 7
-    'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk',
-    'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr',
-    'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc',
-    'Lv', 'Ts', 'Og']
+from utils.utils_model import get_spectra
+from config_file import palette, seedn, save_extension 
+from utils.helpers import chemical_symbols, sub
 
 
 def save_figure(fig, filename, title=None):
@@ -49,7 +23,6 @@ def save_figure(fig, filename, title=None):
     fig.tight_layout()
     fig.subplots_adjust(hspace=0.6) 
     fig.savefig(f"{filename}.{save_extension}")
-    # plt.close(fig)
 
 
 def plot_loss(history, filename):
@@ -76,7 +49,7 @@ def plot_test_loss(model, dataloader, loss_fn, device, filename, option='kmvn'):
             d.to(device)
             if option == 'kmvn':
                 Hs, shifts = model(d)
-                output = get_spectra_(Hs, shifts, d.qpts)
+                output = get_spectra(Hs, shifts, d.qpts)
             else:
                 output = model(d)
             loss = loss_fn(output, d.y).cpu()
@@ -106,16 +79,16 @@ def simname(symbol):
 
 
 
-def loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y'):
+def loss_dist_general(axl, df, num, palette, tile_losses, fontsize, axis='y'):
     """
     General function to plot the KDE distribution on either x or y axis.
 
     Args:
         axl (matplotlib.axes.Axes): Axis object where the plot is drawn.
-        ds (pandas.DataFrame): DataFrame containing the data.
+        df (pandas.DataFrame): DataFrame containing the data.
         num (int): Number of palette colors to use.
         palette (list): List of colors for the plot.
-        xtiles (list): Quantiles used for shading.
+        tile_losses (list): Quantiles used for shading.
         fontsize (int): Font size for the axis labels.
         axis (str, optional): Axis on which to plot ('x' or 'y'). Defaults to 'y'.
 
@@ -123,9 +96,9 @@ def loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y'):
         axl (matplotlib.axes.Axes): Modified axis with the KDE plot.
         cols (list): List of colors used in the plot.
     """
-    loss_min, loss_max = ds['loss'].min(), ds['loss'].max()
+    loss_min, loss_max = df['loss'].min(), df['loss'].max()
     points = np.linspace(loss_min, loss_max, 5000)
-    kde = gaussian_kde(list(ds['loss']))
+    kde = gaussian_kde(list(df['loss']))
     density = kde.pdf(points)
     
     if axis == 'y':
@@ -137,7 +110,7 @@ def loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y'):
     cols = palette[:num]
     cols_rev = copy(cols)
     cols_rev.reverse()
-    quantiles = list(xtiles)[::-1] + [0]
+    quantiles = list(tile_losses)[::-1] + [0]
     
     for i in range(len(quantiles) - 1):
         if axis == 'y':
@@ -170,29 +143,16 @@ def loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y'):
     return axl, cols
 
 
-def get_spectra_(Hs, shifts, qpts):
-    H = torch.sum(torch.mul(Hs.unsqueeze(1), torch.exp(2j*math.pi*torch.matmul(shifts, qpts.type(torch.complex128).t())).unsqueeze(-1).unsqueeze(-1)), dim = 0)
-    eigvals = torch.linalg.eigvals(H)
-    abx = torch.abs(eigvals)
-    try:
-        epsilon = torch.min(abx[abx > 0])/100
-    except:
-        epsilon = 1E-8
-    eigvals = torch.sqrt(eigvals + epsilon)
-    return torch.sort(torch.real(eigvals))[0]
-
-    
-
 def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor=1000):
+    df = pd.DataFrame(columns=['id', 'name', 'loss', 'real', 'pred', 'time', 'numb'])
     with torch.no_grad():
-        df = pd.DataFrame(columns=['id', 'name', 'loss', 'real', 'pred', 'time', 'numb'])
         for d in tqdm(dataloader):
             try:
                 d.to(device)
                 start_time = time.time()
                 if option == 'kmvn':
                     Hs, shifts = model(d)
-                    output = get_spectra_(Hs, shifts, d.qpts)
+                    output = get_spectra(Hs, shifts, d.qpts)
                 else:
                     output = model(d)
                 run_time = time.time() - start_time
@@ -203,7 +163,6 @@ def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor
 
                 real = d.y.cpu().numpy() * factor
                 pred = output.cpu().numpy() * factor
-                # rrr = {'id': d.id, 'name': d.symbol, 'loss': loss.item(), 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
                 rrr = {'id': d.id, 'name': d.symbol, 'loss': loss, 'real': list(real), 'pred': list(np.array([pred])), 'time': run_time, 'numb': d.numb.cpu()}
                 df0 = pd.DataFrame(data = rrr)
                 df = pd.concat([df, df0], ignore_index=True)
@@ -213,7 +172,7 @@ def generate_dataframe(model, dataloader, loss_fn, device, option='kmvn', factor
     return df
 
 
-def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_func=None, plot_real=True, save_lossx=False, seed=seedn):
+def plot_general(df_in, header, title=None, n=5, m=1, num=3, lwidth=0.5, windowsize=(3, 2), palette=palette, formula=True, plot_func=None, plot_real=True, save_lossx=False, seed=seedn):
     """
     General function to plot data (bands, phonons, etc.)
     
@@ -234,19 +193,17 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
         np.random.seed(seed)  # Set the random seed if provided
     
     fontsize = 10
-    i_mse = np.argsort(df_in['loss'])
-    ds = df_in.iloc[i_mse][['id', 'name', 'real', 'pred', 'loss']].reset_index(drop=True)
-    tiles = (1/3, 2/3, 1.)
-    num = len(tiles)
-    xtiles = np.quantile(ds['loss'].values, tiles)
-    iq = [0] + [np.argmin(np.abs(ds['loss'].values - k)) for k in xtiles]
-    replace = True if len(ds) < n * m * num else False
-    s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=m * n, replace=replace)) for k in range(1, num + 1)])
+    df_sorted = df_in.iloc[np.argsort(df_in['loss'])].reset_index(drop = True)
+    tiles = np.arange(1, num + 1)/num
+    tile_losses = np.quantile(df_sorted['loss'], tiles)
+    idx_q = [0] + [np.argmin(np.abs(df_sorted['loss'] - tile_loss)) for tile_loss in tile_losses]
+    replace = True if len(df_sorted) < n * m * num else False
+    s = np.concatenate([np.sort(np.random.choice(np.arange(idx_q[k], idx_q[k+1], 1), size=m * n, replace=replace)) for k in range(num)])
 
     # Create the distribution plot (optional)
     if save_lossx:
         fig0, axl0 = plt.subplots(1, 1, figsize=(18, 2))
-        axl0, cols0 = loss_dist_general(axl0, ds, num, palette, xtiles, fontsize, axis='x')
+        axl0, cols0 = loss_dist_general(axl0, df_sorted, num, palette, tile_losses, fontsize, axis='x')
         fig0.savefig(f"{header}_{title}_dist.{save_extension}")
 
     # Setup the main plot figure and axes
@@ -259,7 +216,7 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
 
     # Add long axis for KDE
     axl = fig.add_subplot(gs[:, 0])
-    axl, cols = loss_dist_general(axl, ds, num, palette, xtiles, fontsize, axis='y')
+    axl, cols = loss_dist_general(axl, df_sorted, num, palette, tile_losses, fontsize, axis='y')
 
     cols = np.repeat(cols, n * m)
     axs = axs[:, 1:].ravel()
@@ -267,26 +224,18 @@ def plot_general(df_in, header, title=None, n=5, m=1, lwidth=0.5, windowsize=(3,
     id_list = []
     for k in range(num * m * n):
         ax = axs[k]
-        if k >= len(s):  # If we run out of samples, stop plotting
-            break
         i = s[k]
-        real = ds.iloc[i]['real']
-        pred = ds.iloc[i]['pred']
-        
+        real, pred = df_sorted.iloc[i]['real'], df_sorted.iloc[i]['pred']
         # Use the custom plotting function to handle specifics of the data (bands, phonons, etc.)
         plot_func(ax, real, pred, cols[k], lwidth, plot_real=plot_real)
 
         # Set titles and formatting
         if formula:
-            ax.set_title(simname(ds.iloc[i]['name']).translate(sub), fontsize=fontsize * 1.8)
+            ax.set_title(simname(df_sorted.iloc[i]['name']).translate(sub), fontsize=fontsize * 1.8)
         else:
-            ax.set_title(ds.iloc[i]['id'], fontsize=fontsize * 1.8)
-        id_list.append(ds.iloc[i]['id'])
-        min_y = min(np.min(real), np.min(pred))
-        max_y = max(np.max(real), np.max(pred))
-        ax.set_ylim(min_y - 0.05 * (max_y - min_y), max_y + 0.05 * (max_y - min_y))
+            ax.set_title(df_sorted.iloc[i]['id'], fontsize=fontsize * 1.8)
+        id_list.append(df_sorted.iloc[i]['id'])
         ax.tick_params(axis='y', which='major', labelsize=fontsize)
-        ax.set_xticks([])
 
     save_figure(fig, f"{header}_{title}", title=title)
     print(id_list)
@@ -399,10 +348,10 @@ def compare_models(df1, df2, header, color1, color2, labels=('Model1', 'Model2')
     min_y2_loss, max_y2_loss = np.min(p2), np.max(p2)
     min_x_loss, max_x_loss = min([min_x1_loss, min_x2_loss]), max([max_x1_loss, max_x2_loss])
     min_y_loss, max_y_loss = min([min_y1_loss, min_y2_loss]), max([max_y1_loss, max_y2_loss])
-    width_x_loss = max_x_loss - min_x_loss
-    width_y_loss = max_y_loss - min_y_loss
-    ax2.set_xlim(min_x_loss - 0.08 * width_x_loss, max_x_loss + 0.08 * width_x_loss)
-    ax2.set_ylim(min_y_loss - 0.08 * width_y_loss, max_y_loss + 0.08 * width_y_loss)
+    # width_x_loss = max_x_loss - min_x_loss
+    # width_y_loss = max_y_loss - min_y_loss
+    # ax2.set_xlim(min_x_loss - 0.08 * width_x_loss, max_x_loss + 0.08 * width_x_loss)
+    # ax2.set_ylim(min_y_loss - 0.08 * width_y_loss, max_y_loss + 0.08 * width_y_loss)
     
     ax2.tick_params(axis='x', which='major', labelsize=12)
     ax2.set_xlabel('Loss', fontsize=14)

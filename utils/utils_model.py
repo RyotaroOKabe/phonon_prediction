@@ -372,9 +372,7 @@ class GraphNetwork_VVN(BaseGraphNetwork):
         for layer in self.layers:
             x = layer(x, z, node_deg, edge_src, edge_dst, edge_attr, edge_length_embedded, numb, None)
         
-        # print('x (before reshape): ', x.shape)
         x = x.reshape((1, -1))[:, numb:]
-        # print('x (after reshape): ', x.shape)
         return x
 
 

@@ -195,7 +195,6 @@ def plot_general(df_in, header, title=None, n=5, m=1, num=3, lwidth=0.5, windows
     fontsize = 10
     df_sorted = df_in.iloc[np.argsort(df_in['loss'])].reset_index(drop = True)
     tiles = np.arange(1, num + 1)/num
-    # tiles = np.linspace(0, 1, num + 1)[1:-1]
     tile_losses = np.quantile(df_sorted['loss'], tiles)
     idx_q = [0] + [np.argmin(np.abs(df_sorted['loss'] - tile_loss)) for tile_loss in tile_losses]
     replace = True if len(df_sorted) < n * m * num else False

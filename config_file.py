@@ -1,6 +1,6 @@
-pretrained_model_dict = {'kmvn': "241026-182158",
-                     'mvn': '241026-182014',
-                     'vvn': '241026-180553'
+pretrained_model_dict = {'kmvn': "kmvn_241026-182158",
+                     'mvn': 'mvn_241026-182014',
+                     'vvn': 'vvn_241026-180553'
                      } 
 
 pretrained_model_dict_previous = {'kmvn': "kmvn_230103-023724",

@@ -24,7 +24,7 @@ To set up the environment locally and run the code:
 1. Clone the repository:
 	```bash
 	git clone https://github.com/RyotaroOKabe/phonon_prediction.git
-	cd phonon_prediction_
+	cd phonon_prediction
 	```
 
 2. Create a virtual environment:

@@ -29,8 +29,8 @@ To set up the environment locally and run the code:
 
 2. Create a virtual environment:
 	```bash
-	conda create -n pdos python=3.9
-	conda activate pdos
+	conda create -n phonon python=3.9
+	conda activate phonon
 	```
 
 3. Install the required dependencies:
